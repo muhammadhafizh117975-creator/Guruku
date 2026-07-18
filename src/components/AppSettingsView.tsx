@@ -65,9 +65,9 @@ interface AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  schoolName: 'SMP NEGERI INDONESIA JAYA',
-  schoolAddress: 'Jl. Pendidikan No. 45, Kebayoran, Jakarta Selatan',
-  schoolContact: 'Telp: (021) 555-0199 | Email: info@smpn-indonesiajaya.sch.id',
+  schoolName: 'SMP Pertiwi',
+  schoolAddress: '',
+  schoolContact: '',
   academicYear: '2025/2026',
   headmasterName: 'Drs. H. Mulyadi, M.Pd.',
   headmasterNip: '19710312 199702 1 002'
@@ -530,45 +530,19 @@ export default function AppSettingsView() {
           <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-5 transition-colors">
             <div className="flex items-center gap-2 border-b border-gray-50 dark:border-neutral-800 pb-3">
               <FileText className="w-4.5 h-4.5 text-[#696cff]" />
-              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Identitas Kop Surat Laporan</h4>
+              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Identitas Sekolah & Kepala Sekolah</h4>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
-                  Nama Instansi / Sekolah / Yayasan
+                  Nama Sekolah / Instansi (Untuk Tanda Tangan)
                 </label>
                 <input
                   type="text"
                   value={settings.schoolName}
                   onChange={(e) => handleSaveSettings({ ...settings, schoolName: e.target.value })}
-                  placeholder="Contoh: SMP NEGERI INDONESIA JAYA"
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200 font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
-                  Alamat Lengkap Instansi
-                </label>
-                <input
-                  type="text"
-                  value={settings.schoolAddress}
-                  onChange={(e) => handleSaveSettings({ ...settings, schoolAddress: e.target.value })}
-                  placeholder="Contoh: Jl. Raya Kebangsaan No. 45"
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200 font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
-                  Kontak Instansi (Telepon / Email / Fax)
-                </label>
-                <input
-                  type="text"
-                  value={settings.schoolContact}
-                  onChange={(e) => handleSaveSettings({ ...settings, schoolContact: e.target.value })}
-                  placeholder="Contoh: Telp: (021) 1234567 | Email: sekolah@belajar.id"
+                  placeholder="Contoh: SMP Pertiwi"
                   className="w-full px-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200 font-medium"
                 />
               </div>
@@ -604,7 +578,7 @@ export default function AppSettingsView() {
               {/* Logo Upload Section */}
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                  Logo Kop Surat (Format Gambar)
+                  Gambar Kop Surat Lengkap (Format Gambar)
                 </label>
                 <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gray-50 dark:bg-[#232333] rounded-xl border border-dashed border-gray-200 dark:border-neutral-700">
                   {settings.logoDataUrl ? (
@@ -618,7 +592,7 @@ export default function AppSettingsView() {
                       <button
                         onClick={handleRemoveLogo}
                         className="absolute -top-2 -right-2 p-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full shadow-md transition"
-                        title="Hapus Logo"
+                        title="Hapus Kop Surat"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -631,10 +605,10 @@ export default function AppSettingsView() {
 
                   <div className="flex-1 text-center sm:text-left space-y-1.5">
                     <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      {settings.logoDataUrl ? 'Ganti file logo baru' : 'Unggah logo resmi sekolah'}
+                      {settings.logoDataUrl ? 'Ganti file kop surat baru' : 'Unggah gambar kop surat resmi'}
                     </p>
                     <p className="text-[10px] text-gray-400">
-                      Disarankan menggunakan file PNG / JPG berlatar belakang transparan (maks. 1.5MB)
+                      Unggah gambar kop surat utuh (termasuk logo, nama sekolah, alamat, telepon, dan garis pembatas). Format PNG/JPG (maks. 1.5MB).
                     </p>
                     <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 text-[#696cff] hover:bg-indigo-100/50 dark:hover:bg-indigo-950/50 transition text-xs font-bold rounded-lg cursor-pointer">
                       <Upload className="w-3.5 h-3.5" />
@@ -655,25 +629,23 @@ export default function AppSettingsView() {
           {/* Preview Kop Surat */}
           <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-3 transition-colors">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Live Preview Kop Surat Laporan (Cetak)</h4>
-            <div className="border border-gray-100 dark:border-neutral-800 p-5 rounded-xl bg-white text-gray-900 shadow-xs flex items-center gap-5">
+            <div className="border border-gray-100 dark:border-neutral-800 p-5 rounded-xl bg-white text-gray-900 shadow-xs flex flex-col items-center justify-center min-h-[120px]">
               {settings.logoDataUrl ? (
                 <img 
                   src={settings.logoDataUrl} 
-                  alt="Logo" 
-                  className="w-16 h-16 object-contain"
+                  alt="Kop Surat" 
+                  className="w-full h-auto max-h-24 object-contain"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center border border-dashed border-gray-200 shrink-0">
-                  <span className="text-[10px] text-gray-400 text-center font-bold px-1">No Logo</span>
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <p className="text-xs text-gray-400 font-semibold">[ Belum Ada Gambar Kop Surat Diunggah ]</p>
+                  <p className="text-[10px] text-gray-400 mt-1">Sistem akan menampilkan kop kosong atau instruksi unggah saat mencetak laporan.</p>
                 </div>
               )}
-              <div className="flex-1 text-center pr-12">
-                <h3 className="font-bold text-sm tracking-wide uppercase leading-tight">{settings.schoolName || 'NAMA SEKOLAH BELUM DIATUR'}</h3>
-                <p className="text-[10px] text-gray-600 font-medium mt-0.5">{settings.schoolAddress || 'Alamat belum diatur'}</p>
-                <p className="text-[9px] text-gray-400 font-mono mt-0.5">{settings.schoolContact || 'Telepon / Email belum diatur'}</p>
-                <hr className="border-t-2 border-gray-800 mt-2" />
-              </div>
             </div>
           </div>
 

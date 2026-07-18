@@ -244,7 +244,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
         <div className="space-y-16">
           <div>
             <p>Mengetahui,</p>
-            <p className="font-bold">Kepala Sekolah {appSettings.schoolName}</p>
+            <p className="font-bold">Kepala {appSettings.schoolName}</p>
           </div>
           <div>
             <p className="font-bold underline">{headmasterName}</p>
@@ -254,7 +254,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
         <div className="space-y-16">
           <div>
-            <p>Jakarta, {formattedDate}</p>
+            <p>Bandung, {formattedDate}</p>
             <p className="font-bold">Guru Mata Pelajaran,</p>
           </div>
           <div>
@@ -354,25 +354,20 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
       {/* 2. Print Header layout (Print only) with customized Kop Surat */}
       <div className="hidden print:block text-black mb-6">
-        <div className="flex items-center gap-5 border-b-3 border-black pb-3 mb-4">
-          {appSettings.logoDataUrl ? (
+        {appSettings.logoDataUrl ? (
+          <div className="w-full text-center mb-5">
             <img 
               src={appSettings.logoDataUrl} 
-              alt="Logo Sekolah" 
-              className="w-16 h-16 object-contain"
+              alt="Kop Surat" 
+              className="w-full h-auto max-h-32 object-contain mx-auto"
               referrerPolicy="no-referrer"
             />
-          ) : (
-            <div className="w-16 h-16 border-2 border-black flex items-center justify-center font-bold text-xs">
-              LOGO
-            </div>
-          )}
-          <div className="flex-1 text-center pr-12">
-            <h1 className="text-base font-extrabold uppercase tracking-wide leading-tight">{appSettings.schoolName}</h1>
-            <p className="text-[10px] font-semibold mt-0.5">{appSettings.schoolAddress}</p>
-            <p className="text-[9px] font-mono mt-0.5">{appSettings.schoolContact}</p>
           </div>
-        </div>
+        ) : (
+          <div className="w-full h-24 border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400 mb-5 font-semibold uppercase rounded-xl">
+            [Silakan unggah Gambar Kop Surat Lengkap di menu Pengaturan]
+          </div>
+        )}
         
         <div className="text-center space-y-1">
           <h2 className="text-sm font-bold uppercase tracking-wider">
