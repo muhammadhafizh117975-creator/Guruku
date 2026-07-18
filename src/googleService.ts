@@ -3,9 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 import { Profile, Subject, Class, Student, Grade, Attendance, TeachingJournal } from './types';
 import { getFromStorage, saveToStorage } from './store';
+
+// Initialize Firebase App
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const auth = getAuth(app);
+
+const provider = new GoogleAuthProvider();
+// Request required Google Workspace scopes
+provider.addScope('https://www.googleapis.com/auth/drive');
+provider.addScope('https://www.googleapis.com/auth/drive.file');
+provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 
 export interface GoogleUser {
   uid: string;
@@ -13,9 +25,6 @@ export interface GoogleUser {
   email: string | null;
   photoURL: string | null;
 }
-
-const CLIENT_ID = firebaseConfig.oAuthClientId || "41903237065-vg0rch3udso2e090ut6vsapo8i3n92nn.apps.googleusercontent.com";
-const REDIRECT_URI = window.location.origin;
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;
@@ -43,104 +52,63 @@ export const initAuth = (
       console.error('Failed to parse cached Google user:', err);
       if (onAuthFailure) setTimeout(() => onAuthFailure(), 100);
     }
-  } else {
-    cachedAccessToken = null;
-    if (onAuthFailure) {
-      setTimeout(() => {
-        onAuthFailure();
-      }, 100);
-    }
   }
 
-  // Return a dummy unsubscribe function matching expected signature
-  return () => {};
+  return onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+    if (firebaseUser) {
+      const user: GoogleUser = {
+        uid: firebaseUser.uid,
+        displayName: firebaseUser.displayName,
+        email: firebaseUser.email,
+        photoURL: firebaseUser.photoURL
+      };
+
+      if (cachedAccessToken) {
+        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      } else {
+        // If user is logged in but token was lost (e.g., refresh), we will need re-auth or pop-up
+        if (onAuthFailure) onAuthFailure();
+      }
+    } else {
+      cachedAccessToken = null;
+      sessionStorage.removeItem('guruku_gtoken');
+      sessionStorage.removeItem('guruku_guser');
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
 };
 
-// Sign in with Google using custom OAuth2 Implicit Flow Popup
+// Sign in with Google using standard Firebase popup Auth
 export const googleSignIn = async (): Promise<{ user: GoogleUser; accessToken: string } | null> => {
   if (isSigningIn) return null;
-  
-  return new Promise((resolve, reject) => {
-    isSigningIn = true;
-    
-    const scopes = [
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/userinfo.profile',
-      'https://www.googleapis.com/auth/userinfo.email'
-    ].join(' ');
+  isSigningIn = true;
 
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + new URLSearchParams({
-      client_id: CLIENT_ID,
-      redirect_uri: REDIRECT_URI,
-      response_type: 'token',
-      scope: scopes,
-      prompt: 'consent'
-    }).toString();
-
-    const popup = window.open(authUrl, 'google_oauth_popup', 'width=600,height=650');
-    if (!popup) {
-      isSigningIn = false;
-      reject(new Error('Popup diblokir oleh browser. Harap izinkan popup untuk situs ini agar dapat menyinkronkan data Google.'));
-      return;
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error('Gagal mendapatkan token akses dari Google.');
     }
 
-    const messageHandler = async (event: MessageEvent) => {
-      // Security check: must match our origin
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data?.type === 'GOOGLE_OAUTH_SUCCESS') {
-        const token = event.data.accessToken;
-        window.removeEventListener('message', messageHandler);
-        
-        try {
-          // Fetch real user info using the access token
-          const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (!userRes.ok) {
-            throw new Error('Gagal merespons dari API Google UserInfo');
-          }
-          const userData = await userRes.json();
-          
-          const user: GoogleUser = {
-            uid: userData.sub || 'google-user-' + Date.now(),
-            displayName: userData.name || userData.given_name || 'Google User',
-            email: userData.email || '',
-            photoURL: userData.picture || null
-          };
-          
-          cachedAccessToken = token;
-          sessionStorage.setItem('guruku_gtoken', token);
-          sessionStorage.setItem('guruku_guser', JSON.stringify(user));
-          
-          isSigningIn = false;
-          resolve({ user, accessToken: token });
-        } catch (err: any) {
-          isSigningIn = false;
-          reject(new Error('Gagal memuat profil Google Anda: ' + (err.message || err)));
-        }
-      } else if (event.data?.type === 'GOOGLE_OAUTH_FAILURE') {
-        window.removeEventListener('message', messageHandler);
-        isSigningIn = false;
-        reject(new Error(event.data.error || 'Autentikasi Google dibatalkan atau gagal.'));
-      }
+    const firebaseUser = result.user;
+    const user: GoogleUser = {
+      uid: firebaseUser.uid,
+      displayName: firebaseUser.displayName,
+      email: firebaseUser.email,
+      photoURL: firebaseUser.photoURL
     };
 
-    window.addEventListener('message', messageHandler);
+    cachedAccessToken = credential.accessToken;
+    sessionStorage.setItem('guruku_gtoken', cachedAccessToken);
+    sessionStorage.setItem('guruku_guser', JSON.stringify(user));
     
-    // Popup closure detector
-    const timer = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(timer);
-        setTimeout(() => {
-          window.removeEventListener('message', messageHandler);
-          isSigningIn = false;
-        }, 1000);
-      }
-    }, 1000);
-  });
+    return { user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error('Sign in error:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
 };
 
 // Get current access token
@@ -150,6 +118,7 @@ export const getAccessToken = async (): Promise<string | null> => {
 
 // Sign out from Google
 export const logoutGoogle = async () => {
+  await auth.signOut();
   cachedAccessToken = null;
   sessionStorage.removeItem('guruku_gtoken');
   sessionStorage.removeItem('guruku_guser');
@@ -365,7 +334,10 @@ export async function createGuruKuSpreadsheet(): Promise<{ id: string; url: stri
       { properties: { title: 'students' } },
       { properties: { title: 'grades' } },
       { properties: { title: 'attendance' } },
-      { properties: { title: 'teaching_journals' } }
+      { properties: { title: 'teaching_journals' } },
+      { properties: { title: 'modul_ajar' } },
+      { properties: { title: 'app_settings' } },
+      { properties: { title: 'grade_weights' } }
     ]
   };
 
@@ -396,7 +368,33 @@ export async function pullDataFromSpreadsheet(spreadsheetId: string): Promise<bo
   const token = await getAccessToken();
   if (!token) throw new Error('Unauthenticated');
 
-  const sheetsToPull = ['profiles', 'subjects', 'classes', 'students', 'grades', 'attendance', 'teaching_journals'];
+  // Fetch available sheets from metadata first to handle older files gracefully
+  const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!metaRes.ok) {
+    throw new Error('Gagal mengambil metadata spreadsheet.');
+  }
+  const metaData = await metaRes.json();
+  const existingSheets = (metaData.sheets || []).map((s: any) => s.properties.title) as string[];
+
+  const allPossibleSheets = [
+    'profiles', 
+    'subjects', 
+    'classes', 
+    'students', 
+    'grades', 
+    'attendance', 
+    'teaching_journals',
+    'modul_ajar',
+    'app_settings',
+    'grade_weights'
+  ];
+
+  // Only pull sheets that actually exist in the spreadsheet
+  const sheetsToPull = allPossibleSheets.filter(sheet => existingSheets.includes(sheet));
+  if (sheetsToPull.length === 0) return true;
+
   const ranges = sheetsToPull.map(sheet => `${sheet}!A1:Z500`).join('&ranges=');
 
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${ranges}`, {
@@ -441,6 +439,17 @@ export async function pullDataFromSpreadsheet(spreadsheetId: string): Promise<bo
       if (parsedData.length > 0) {
         localStorage.setItem('guruku_profiles', JSON.stringify(parsedData[0]));
       }
+    } else if (sheetName === 'app_settings') {
+      if (parsedData.length > 0) {
+        localStorage.setItem('guruku_app_settings', JSON.stringify(parsedData[0]));
+        if (parsedData[0].academicYear) {
+          localStorage.setItem('guruku_tahun_ajaran', parsedData[0].academicYear);
+        }
+      }
+    } else if (sheetName === 'grade_weights') {
+      if (parsedData.length > 0) {
+        localStorage.setItem('guruku_grade_weights', JSON.stringify(parsedData[0]));
+      }
     } else {
       localStorage.setItem(`guruku_${sheetName}`, JSON.stringify(parsedData));
     }
@@ -456,6 +465,52 @@ export async function pushDataToSpreadsheet(spreadsheetId: string): Promise<bool
   const token = await getAccessToken();
   if (!token) throw new Error('Unauthenticated');
 
+  // Fetch available sheet titles first to see if we need to create missing ones
+  const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!metaRes.ok) {
+    throw new Error('Gagal mengambil metadata spreadsheet.');
+  }
+  const metaData = await metaRes.json();
+  const existingSheets = (metaData.sheets || []).map((s: any) => s.properties.title) as string[];
+
+  const requiredSheets = [
+    'profiles', 
+    'subjects', 
+    'classes', 
+    'students', 
+    'grades', 
+    'attendance', 
+    'teaching_journals',
+    'modul_ajar',
+    'app_settings',
+    'grade_weights'
+  ];
+
+  const sheetsToCreate = requiredSheets.filter(sheet => !existingSheets.includes(sheet));
+
+  // Create any missing sheets dynamically on the fly
+  if (sheetsToCreate.length > 0) {
+    const addSheetsRequests = sheetsToCreate.map(title => ({
+      addSheet: {
+        properties: { title }
+      }
+    }));
+
+    const createSheetsRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ requests: addSheetsRequests })
+    });
+    if (!createSheetsRes.ok) {
+      throw new Error('Gagal membuat lembar kerja baru yang diperlukan di Google Sheets.');
+    }
+  }
+
   // Prepare database data
   const profiles = [getFromStorage<Profile>('guruku_profiles', { name: '', nip_nuptk: '', email: '', hp: '', photoUrl: '' })];
   const subjects = getFromStorage<Subject[]>('guruku_subjects', []);
@@ -464,6 +519,21 @@ export async function pushDataToSpreadsheet(spreadsheetId: string): Promise<bool
   const grades = getFromStorage<Grade[]>('guruku_grades', []);
   const attendance = getFromStorage<Attendance[]>('guruku_attendance', []);
   const journals = getFromStorage<TeachingJournal[]>('guruku_teaching_journals', []);
+  const modul_ajar = getFromStorage<any[]>('guruku_modul_ajar', []);
+  const app_settings = [getFromStorage<any>('guruku_app_settings', {
+    schoolName: 'SMP Pertiwi',
+    schoolAddress: '',
+    schoolContact: '',
+    academicYear: '2025/2026',
+    headmasterName: 'Drs. H. Mulyadi, M.Pd.',
+    headmasterNip: '19710312 199702 1 002'
+  })];
+  const grade_weights = [getFromStorage<any>('guruku_grade_weights', {
+    assignment: 20,
+    daily: 30,
+    asts: 25,
+    asas: 25
+  })];
 
   const dataMapping = {
     profiles,
@@ -472,7 +542,10 @@ export async function pushDataToSpreadsheet(spreadsheetId: string): Promise<bool
     students,
     grades,
     attendance,
-    teaching_journals: journals
+    teaching_journals: journals,
+    modul_ajar,
+    app_settings,
+    grade_weights
   };
 
   const valueRanges: any[] = [];
