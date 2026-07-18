@@ -38,7 +38,8 @@ import {
   saveToStorage, 
   exportDatabaseAsSpreadsheetJSON, 
   importDatabaseFromSpreadsheetJSON,
-  initStorage
+  initStorage,
+  restoreFromAutoBackup
 } from '../store';
 import { 
   googleSignIn, 
@@ -99,6 +100,37 @@ export default function AppSettingsView() {
 
   // Backups state
   const [backups, setBackups] = useState<any[]>([]);
+
+  // Local Automatic Backups State
+  const [localAutoBackups, setLocalAutoBackups] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('guruku_auto_backups');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleRestoreAutoBackup = (id: string, timestamp: string) => {
+    const formattedDate = new Date(timestamp).toLocaleString('id-ID');
+    if (confirm(`Apakah Anda yakin ingin memulihkan data dari Cadangan Otomatis (${formattedDate})? Semua data saat ini (termasuk kelas, siswa, nilai, jurnal, kop surat, dan bobot nilai) akan digantikan.`)) {
+      const success = restoreFromAutoBackup(id);
+      if (success) {
+        setNotification({
+          type: 'success',
+          message: 'Cadangan Otomatis berhasil dipulihkan! Memuat ulang halaman...'
+        });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        setNotification({
+          type: 'error',
+          message: 'Gagal memulihkan Cadangan Otomatis.'
+        });
+      }
+    }
+  };
 
   // Auto clear notification
   useEffect(() => {
@@ -215,10 +247,19 @@ export default function AppSettingsView() {
         }, 500);
       }
     } catch (err: any) {
-      setNotification({
-        type: 'error',
-        message: `Gagal masuk ke Google: ${err.message || err}`
-      });
+      console.error('Google Sign In Error:', err);
+      const errMsg = err.message || String(err);
+      if (errMsg.includes('auth/unauthorized-domain') || errMsg.includes('unauthorized-domain')) {
+        setNotification({
+          type: 'error',
+          message: 'Domain belum diotorisasi Firebase. Kami baru saja menyelesaikan konfigurasi OAuth. Harap tunggu 1-2 menit untuk sinkronisasi domain, lalu coba lagi!'
+        });
+      } else {
+        setNotification({
+          type: 'error',
+          message: `Gagal masuk ke Google: ${errMsg}`
+        });
+      }
     } finally {
       setIsConnectingGoogle(false);
     }
@@ -716,6 +757,67 @@ export default function AppSettingsView() {
                 <RefreshCw className="w-4 h-4" />
                 <span>Setel Ulang DB</span>
               </button>
+            </div>
+          </div>
+
+          {/* Card 3: Cadangan Otomatis (Auto-Backup History) */}
+          <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-4 transition-colors">
+            <div className="flex items-center gap-2 border-b border-gray-50 dark:border-neutral-800 pb-3">
+              <CheckCircle className="w-4.5 h-4.5 text-emerald-500" />
+              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Cadangan Otomatis (Lokal)</h4>
+            </div>
+
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Sistem mencadangkan seluruh data dashboard Anda secara otomatis di latar belakang setiap kali ada perubahan data (real-time).
+            </p>
+
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {localAutoBackups.length > 0 ? (
+                localAutoBackups.map((bk, index) => (
+                  <div 
+                    key={bk.id} 
+                    className="p-2.5 bg-gray-50 dark:bg-[#232333]/40 border border-gray-100 dark:border-neutral-800/80 rounded-xl space-y-1.5 text-xs"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-gray-700 dark:text-gray-300">
+                        {index === 0 ? 'Terbaru (Auto)' : `Snapshot #${localAutoBackups.length - index}`}
+                      </span>
+                      <span className="text-[9px] text-gray-400 font-mono">
+                        {new Date(bk.timestamp).toLocaleString('id-ID', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    
+                    {bk.summary && (
+                      <div className="text-[10px] text-gray-400 font-mono grid grid-cols-2 gap-x-2 gap-y-0.5 border-t border-dashed border-gray-100 dark:border-neutral-800/60 pt-1">
+                        <span>👥 {bk.summary.studentsCount} Siswa</span>
+                        <span>🏫 {bk.summary.classesCount} Kelas</span>
+                        <span>📝 {bk.summary.journalsCount} Jurnal</span>
+                        <span>📊 {bk.summary.gradesCount} Nilai</span>
+                      </div>
+                    )}
+
+                    <div className="pt-1.5 flex justify-end">
+                      <button
+                        onClick={() => handleRestoreAutoBackup(bk.id, bk.timestamp)}
+                        className="px-2.5 py-1 bg-[#696cff]/10 hover:bg-[#696cff] text-[#696cff] hover:text-white dark:bg-indigo-950/40 dark:text-indigo-400 rounded-lg text-[10px] font-bold transition cursor-pointer"
+                      >
+                        Pulihkan Data
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-[10px] text-gray-400">
+                  Belum ada cadangan otomatis yang tercatat. Lakukan perubahan data apa pun untuk memicu backup.
+                </div>
+              )}
             </div>
           </div>
 

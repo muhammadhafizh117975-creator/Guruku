@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Profile, Subject, Class, Student, Grade, Attendance, TeachingJournal } from './types';
+import { Profile, Subject, Class, Student, Grade, Attendance, TeachingJournal, ModulAjar } from './types';
 
 // Default Teacher Profile matched to the user's details
 const DEFAULT_PROFILE: Profile = {
@@ -240,6 +240,13 @@ export const saveToStorage = <T>(key: string, data: T): void => {
   const config = getFromStorage('guruku_spreadsheet_config', { connected: true, spreadsheetId: '', sheetUrl: '', lastSynced: '' });
   config.lastSynced = new Date().toISOString().replace('T', ' ').substring(0, 16);
   localStorage.setItem('guruku_spreadsheet_config', JSON.stringify(config));
+
+  // Trigger automated backup
+  try {
+    triggerAutoBackup();
+  } catch (err) {
+    console.error('Failed to trigger auto-backup inside saveToStorage:', err);
+  }
 };
 
 // Spreadsheet Export/Import
@@ -252,6 +259,9 @@ export const exportDatabaseAsSpreadsheetJSON = () => {
     grades: getFromStorage<Grade[]>('guruku_grades', []),
     attendance: getFromStorage<Attendance[]>('guruku_attendance', []),
     teaching_journals: getFromStorage<TeachingJournal[]>('guruku_teaching_journals', []),
+    modul_ajar: getFromStorage<ModulAjar[]>('guruku_modul_ajar', []),
+    app_settings: getFromStorage<any>('guruku_app_settings', null),
+    grade_weights: getFromStorage<any>('guruku_grade_weights', null),
   };
   return JSON.stringify(data, null, 2);
 };
@@ -266,6 +276,9 @@ export const importDatabaseFromSpreadsheetJSON = (jsonString: string): boolean =
     if (parsed.grades) localStorage.setItem('guruku_grades', JSON.stringify(parsed.grades));
     if (parsed.attendance) localStorage.setItem('guruku_attendance', JSON.stringify(parsed.attendance));
     if (parsed.teaching_journals) localStorage.setItem('guruku_teaching_journals', JSON.stringify(parsed.teaching_journals));
+    if (parsed.modul_ajar) localStorage.setItem('guruku_modul_ajar', JSON.stringify(parsed.modul_ajar));
+    if (parsed.app_settings) localStorage.setItem('guruku_app_settings', JSON.stringify(parsed.app_settings));
+    if (parsed.grade_weights) localStorage.setItem('guruku_grade_weights', JSON.stringify(parsed.grade_weights));
     return true;
   } catch (error) {
     console.error('Failed to import database:', error);
@@ -297,4 +310,61 @@ export const calculatePredicate = (score: number): 'A' | 'B' | 'C' | 'D' | 'E' =
   if (score >= 68) return 'C';
   if (score >= 55) return 'D';
   return 'E';
+};
+
+// Automatic Backup and Restore Helpers
+export const triggerAutoBackup = (): void => {
+  try {
+    const currentDataStr = exportDatabaseAsSpreadsheetJSON();
+    const backupsStr = localStorage.getItem('guruku_auto_backups');
+    const backups: any[] = backupsStr ? JSON.parse(backupsStr) : [];
+    
+    // Check if the current data matches the last backup
+    if (backups.length > 0) {
+      const lastBackup = backups[0];
+      if (lastBackup.data === currentDataStr) {
+        // No changes, no need to create a new backup
+        return;
+      }
+    }
+    
+    // Create new backup
+    const parsedData = JSON.parse(currentDataStr);
+    const summary = {
+      studentsCount: parsedData.students?.length || 0,
+      classesCount: parsedData.classes?.length || 0,
+      gradesCount: parsedData.grades?.length || 0,
+      journalsCount: parsedData.teaching_journals?.length || 0,
+      subjectsCount: parsedData.subjects?.length || 0,
+    };
+    
+    const newBackup = {
+      id: `auto-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      data: currentDataStr,
+      summary
+    };
+    
+    // Prepend and limit to 10 backups
+    const updatedBackups = [newBackup, ...backups].slice(0, 10);
+    localStorage.setItem('guruku_auto_backups', JSON.stringify(updatedBackups));
+    console.log('Automated backup created successfully.');
+  } catch (err) {
+    console.error('Failed to run automated backup:', err);
+  }
+};
+
+export const restoreFromAutoBackup = (backupId: string): boolean => {
+  try {
+    const backupsStr = localStorage.getItem('guruku_auto_backups');
+    if (!backupsStr) return false;
+    const backups: any[] = JSON.parse(backupsStr);
+    const backup = backups.find(b => b.id === backupId);
+    if (!backup) return false;
+    
+    return importDatabaseFromSpreadsheetJSON(backup.data);
+  } catch (err) {
+    console.error('Failed to restore from auto backup:', err);
+    return false;
+  }
 };

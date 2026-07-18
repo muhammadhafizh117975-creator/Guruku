@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MenuType } from './types';
-import { initStorage, getFromStorage } from './store';
+import { initStorage, getFromStorage, triggerAutoBackup } from './store';
 
 // Views
 import Sidebar from './components/Sidebar';
@@ -35,6 +35,9 @@ export default function App() {
   useEffect(() => {
     // 1. Initialise mock database seed records
     initStorage();
+    
+    // Create background auto backup if anything changed
+    triggerAutoBackup();
 
     // 2. Read active session
     const sessionStr = localStorage.getItem('guruku_session') || sessionStorage.getItem('guruku_session');
