@@ -51,9 +51,9 @@ import {
   uploadBackupToDrive,
   listBackupsFromDrive,
   downloadBackupFromDrive,
-  initAuth
+  initAuth,
+  GoogleUser
 } from '../googleService';
-import { User } from 'firebase/auth';
 
 interface AppSettings {
   schoolName: string;
@@ -82,7 +82,7 @@ export default function AppSettingsView() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Google Integration States
-  const [googleUser, setGoogleUser] = useState<User | null>(null);
+  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
   const [gToken, setGToken] = useState<string | null>(null);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);

@@ -3,71 +3,144 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 import { Profile, Subject, Class, Student, Grade, Attendance, TeachingJournal } from './types';
 import { getFromStorage, saveToStorage } from './store';
 
-// Initialize Firebase App
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
+export interface GoogleUser {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
+}
 
-const provider = new GoogleAuthProvider();
-// Request required Google Workspace scopes
-provider.addScope('https://www.googleapis.com/auth/drive');
-provider.addScope('https://www.googleapis.com/auth/drive.file');
-provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+const CLIENT_ID = firebaseConfig.oAuthClientId || "41903237065-vg0rch3udso2e090ut6vsapo8i3n92nn.apps.googleusercontent.com";
+const REDIRECT_URI = window.location.origin;
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;
 
 // Initialize auth listener
 export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthSuccess?: (user: GoogleUser, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  // Try to load cached token from session memory if signed in
-  const cached = sessionStorage.getItem('guruku_gtoken');
-  if (cached) {
-    cachedAccessToken = cached;
+  // Try to load cached token and user from session memory if signed in
+  const cachedToken = sessionStorage.getItem('guruku_gtoken');
+  const cachedUserStr = sessionStorage.getItem('guruku_guser');
+
+  if (cachedToken && cachedUserStr) {
+    cachedAccessToken = cachedToken;
+    try {
+      const user = JSON.parse(cachedUserStr) as GoogleUser;
+      if (onAuthSuccess) {
+        // Trigger on next tick so that react components have mounted
+        setTimeout(() => {
+          onAuthSuccess(user, cachedToken);
+        }, 100);
+      }
+    } catch (err) {
+      console.error('Failed to parse cached Google user:', err);
+      if (onAuthFailure) setTimeout(() => onAuthFailure(), 100);
+    }
+  } else {
+    cachedAccessToken = null;
+    if (onAuthFailure) {
+      setTimeout(() => {
+        onAuthFailure();
+      }, 100);
+    }
   }
 
-  return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else {
-        // If user is logged in but token was lost (e.g., refresh), we will need re-auth or pop-up
-        if (onAuthFailure) onAuthFailure();
-      }
-    } else {
-      cachedAccessToken = null;
-      sessionStorage.removeItem('guruku_gtoken');
-      if (onAuthFailure) onAuthFailure();
-    }
-  });
+  // Return a dummy unsubscribe function matching expected signature
+  return () => {};
 };
 
-// Sign in with Google
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
-  try {
+// Sign in with Google using custom OAuth2 Implicit Flow Popup
+export const googleSignIn = async (): Promise<{ user: GoogleUser; accessToken: string } | null> => {
+  if (isSigningIn) return null;
+  
+  return new Promise((resolve, reject) => {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Gagal mendapatkan token akses dari Google.');
+    
+    const scopes = [
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ].join(' ');
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + new URLSearchParams({
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT_URI,
+      response_type: 'token',
+      scope: scopes,
+      prompt: 'consent'
+    }).toString();
+
+    const popup = window.open(authUrl, 'google_oauth_popup', 'width=600,height=650');
+    if (!popup) {
+      isSigningIn = false;
+      reject(new Error('Popup diblokir oleh browser. Harap izinkan popup untuk situs ini agar dapat menyinkronkan data Google.'));
+      return;
     }
 
-    cachedAccessToken = credential.accessToken;
-    sessionStorage.setItem('guruku_gtoken', cachedAccessToken);
-    return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error: any) {
-    console.error('Sign in error:', error);
-    throw error;
-  } finally {
-    isSigningIn = false;
-  }
+    const messageHandler = async (event: MessageEvent) => {
+      // Security check: must match our origin
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data?.type === 'GOOGLE_OAUTH_SUCCESS') {
+        const token = event.data.accessToken;
+        window.removeEventListener('message', messageHandler);
+        
+        try {
+          // Fetch real user info using the access token
+          const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!userRes.ok) {
+            throw new Error('Gagal merespons dari API Google UserInfo');
+          }
+          const userData = await userRes.json();
+          
+          const user: GoogleUser = {
+            uid: userData.sub || 'google-user-' + Date.now(),
+            displayName: userData.name || userData.given_name || 'Google User',
+            email: userData.email || '',
+            photoURL: userData.picture || null
+          };
+          
+          cachedAccessToken = token;
+          sessionStorage.setItem('guruku_gtoken', token);
+          sessionStorage.setItem('guruku_guser', JSON.stringify(user));
+          
+          isSigningIn = false;
+          resolve({ user, accessToken: token });
+        } catch (err: any) {
+          isSigningIn = false;
+          reject(new Error('Gagal memuat profil Google Anda: ' + (err.message || err)));
+        }
+      } else if (event.data?.type === 'GOOGLE_OAUTH_FAILURE') {
+        window.removeEventListener('message', messageHandler);
+        isSigningIn = false;
+        reject(new Error(event.data.error || 'Autentikasi Google dibatalkan atau gagal.'));
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+    
+    // Popup closure detector
+    const timer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(timer);
+        setTimeout(() => {
+          window.removeEventListener('message', messageHandler);
+          isSigningIn = false;
+        }, 1000);
+      }
+    }, 1000);
+  });
 };
 
 // Get current access token
@@ -77,9 +150,9 @@ export const getAccessToken = async (): Promise<string | null> => {
 
 // Sign out from Google
 export const logoutGoogle = async () => {
-  await auth.signOut();
   cachedAccessToken = null;
   sessionStorage.removeItem('guruku_gtoken');
+  sessionStorage.removeItem('guruku_guser');
 };
 
 
