@@ -1,0 +1,6 @@
+{
+  "name": "GuruKu",
+  "description": "Aplikasi manajemen sekolah untuk Guru guna mengelola data siswa, nilai akademik, absensi harian, dan jurnal mengajar harian secara efisien dengan visualisasi statistik modern.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
