@@ -188,31 +188,31 @@ const SEED_JOURNALS: TeachingJournal[] = [
 ];
 
 // Initialize Storage values
-export const initStorage = () => {
-  if (!localStorage.getItem('guruku_profiles')) {
+export const initStorage = (force = false) => {
+  if (force || !localStorage.getItem('guruku_profiles')) {
     localStorage.setItem('guruku_profiles', JSON.stringify(DEFAULT_PROFILE));
   }
-  if (!localStorage.getItem('guruku_subjects')) {
+  if (force || !localStorage.getItem('guruku_subjects')) {
     localStorage.setItem('guruku_subjects', JSON.stringify(SEED_SUBJECTS));
   }
-  if (!localStorage.getItem('guruku_classes')) {
+  if (force || !localStorage.getItem('guruku_classes')) {
     localStorage.setItem('guruku_classes', JSON.stringify(SEED_CLASSES));
   }
-  if (!localStorage.getItem('guruku_students')) {
+  if (force || !localStorage.getItem('guruku_students')) {
     localStorage.setItem('guruku_students', JSON.stringify(SEED_STUDENTS));
   }
-  if (!localStorage.getItem('guruku_grades')) {
+  if (force || !localStorage.getItem('guruku_grades')) {
     localStorage.setItem('guruku_grades', JSON.stringify(SEED_GRADES));
   }
-  if (!localStorage.getItem('guruku_attendance')) {
+  if (force || !localStorage.getItem('guruku_attendance')) {
     localStorage.setItem('guruku_attendance', JSON.stringify(generateSeedAttendance()));
   }
-  if (!localStorage.getItem('guruku_teaching_journals')) {
+  if (force || !localStorage.getItem('guruku_teaching_journals')) {
     localStorage.setItem('guruku_teaching_journals', JSON.stringify(SEED_JOURNALS));
   }
   
   // Set spreadsheet authentication info
-  if (!localStorage.getItem('guruku_spreadsheet_config')) {
+  if (force || !localStorage.getItem('guruku_spreadsheet_config')) {
     localStorage.setItem('guruku_spreadsheet_config', JSON.stringify({
       connected: false,
       spreadsheetId: '',
@@ -315,6 +315,9 @@ export const calculatePredicate = (score: number): 'A' | 'B' | 'C' | 'D' | 'E' =
 // Automatic Backup and Restore Helpers
 export const triggerAutoBackup = (): void => {
   try {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('guruku_reset_active') === 'true') {
+      return;
+    }
     const currentDataStr = exportDatabaseAsSpreadsheetJSON();
     const backupsStr = localStorage.getItem('guruku_auto_backups');
     const backups: any[] = backupsStr ? JSON.parse(backupsStr) : [];

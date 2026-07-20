@@ -533,8 +533,25 @@ export default function AppSettingsView() {
 
   const handleResetDatabase = () => {
     if (confirm('Apakah Anda yakin ingin menyetel ulang database? Seluruh data kustom Anda akan terhapus dan digantikan oleh data simulasi default.')) {
+      // Preserve active login sessions and themes so the user isn't abruptly logged out
+      const session = localStorage.getItem('guruku_session');
+      const sessionSession = sessionStorage.getItem('guruku_session');
+      const theme = localStorage.getItem('guruku_theme');
+      
+      // Set reset active flag in sessionStorage to block auto-backup triggers on unmount
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('guruku_reset_active', 'true');
+      }
+      
       localStorage.clear();
-      initStorage();
+      
+      if (session) localStorage.setItem('guruku_session', session);
+      if (sessionSession) sessionStorage.setItem('guruku_session', sessionSession);
+      if (theme) localStorage.setItem('guruku_theme', theme);
+      
+      // Force write default seed values
+      initStorage(true);
+      
       setNotification({
         type: 'success',
         message: 'Database disetel ulang ke mode bawaan! Memuat ulang...'

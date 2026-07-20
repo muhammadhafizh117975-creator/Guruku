@@ -33,6 +33,11 @@ export default function App() {
 
   // Initialize DB Tables & Check Active Sessions on Mount
   useEffect(() => {
+    // Clear reset active flag if any on boot
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('guruku_reset_active');
+    }
+
     // 1. Initialise mock database seed records
     initStorage();
     

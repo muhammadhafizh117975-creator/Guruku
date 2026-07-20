@@ -41,6 +41,9 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
   });
 
   // Filter States
+  const [filterAcademicYear, setFilterAcademicYear] = useState<string>(() => {
+    return appSettings.academicYear || '';
+  });
   const [filterSubject, setFilterSubject] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('2026-07-01');
@@ -49,8 +52,16 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
   // Set default filters
   useEffect(() => {
     if (subjects.length > 0 && !filterSubject) setFilterSubject(subjects[0].id);
-    if (classes.length > 0 && !filterClass) setFilterClass(classes[0].id);
-  }, [subjects, classes]);
+    
+    const yearFilteredClasses = classes.filter(c => !filterAcademicYear || c.academic_year === filterAcademicYear);
+    if (yearFilteredClasses.length > 0) {
+      if (!filterClass || !yearFilteredClasses.some(c => c.id === filterClass)) {
+        setFilterClass(yearFilteredClasses[0].id);
+      }
+    } else if (classes.length > 0 && !filterClass) {
+      setFilterClass(classes[0].id);
+    }
+  }, [subjects, classes, filterAcademicYear]);
 
   // Object bindings
   const currentSub = subjects.find(s => s.id === filterSubject);
@@ -278,6 +289,30 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
+          {/* Filter Tahun Pelajaran */}
+          <div className="space-y-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Tahun Pelajaran</label>
+            <select
+              value={filterAcademicYear}
+              onChange={(e) => {
+                const newYear = e.target.value;
+                setFilterAcademicYear(newYear);
+                const yearFilteredClasses = classes.filter(c => !newYear || c.academic_year === newYear);
+                if (yearFilteredClasses.length > 0) {
+                  setFilterClass(yearFilteredClasses[0].id);
+                } else {
+                  setFilterClass('');
+                }
+              }}
+              className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#696cff] font-medium"
+            >
+              <option value="">Semua Tahun</option>
+              {Array.from(new Set(classes.map(c => c.academic_year).filter(Boolean))).map(yr => (
+                <option key={yr} value={yr}>Tahun Pelajaran {yr}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Filter Subject */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Mata Pelajaran</label>
@@ -300,9 +335,12 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
               onChange={(e) => setFilterClass(e.target.value)}
               className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#696cff]"
             >
-              {classes.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {classes
+                .filter(c => !filterAcademicYear || c.academic_year === filterAcademicYear)
+                .map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))
+              }
             </select>
           </div>
 
@@ -354,6 +392,13 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
       {/* 2. Print Header layout (Print only) with customized Kop Surat */}
       <div className="hidden print:block text-black mb-6">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            @page {
+              margin: ${(appSettings.printMarginTop !== undefined ? appSettings.printMarginTop : 1.0)}cm ${(appSettings.printMarginRight !== undefined ? appSettings.printMarginRight : 1.0)}cm ${(appSettings.printMarginBottom !== undefined ? appSettings.printMarginBottom : 1.0)}cm ${(appSettings.printMarginLeft !== undefined ? appSettings.printMarginLeft : 1.0)}cm !important;
+            }
+          }
+        `}} />
         {appSettings.logoDataUrl ? (
           <div className="w-full mb-5">
             <img 
@@ -433,7 +478,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
           </div>
 
-          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -491,60 +536,62 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
       {/* REPORT 2: LAPORAN ABSENSI */}
       {currentMenu === 'report_attendance' && (
-        <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300">
-          <div className="p-4 border-b border-gray-50 dark:border-neutral-800 flex justify-between items-center bg-gray-50/20">
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-              Rekap Kehadiran: {filterStartDate} s/d {filterEndDate}
-            </span>
-          </div>
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent">
+            <div className="p-4 border-b border-gray-50 dark:border-neutral-800 flex justify-between items-center bg-gray-50/20 print:hidden">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                Rekap Kehadiran: {filterStartDate} s/d {filterEndDate}
+              </span>
+            </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-[#252538] text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-neutral-800">
-                  <th className="py-3 px-6 w-28">NIS</th>
-                  <th className="py-3 px-6">Nama Siswa</th>
-                  <th className="py-3 px-4 text-center text-emerald-600">Hadir</th>
-                  <th className="py-3 px-4 text-center text-blue-600">Izin</th>
-                  <th className="py-3 px-4 text-center text-amber-600">Sakit</th>
-                  <th className="py-3 px-4 text-center text-rose-600">Alfa</th>
-                  <th className="py-3 px-4 text-center">Total Sesi</th>
-                  <th className="py-3 px-6 text-center">% Kehadiran</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-neutral-800 text-sm">
-                {attendanceReportList.length > 0 ? (
-                  attendanceReportList.map((ar) => (
-                    <tr key={ar.student.id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
-                      <td className="py-3.5 px-6 font-mono text-xs">{ar.student.nis}</td>
-                      <td className="py-3.5 px-6 font-bold">{ar.student.name}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-semibold text-emerald-600">{ar.hadir}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-semibold text-blue-500">{ar.izin}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-semibold text-amber-500">{ar.sakit}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-semibold text-rose-500">{ar.alfa}</td>
-                      <td className="py-3.5 px-4 text-center font-mono">{ar.total}</td>
-                      <td className="py-3.5 px-6 text-center">
-                        <span className={`font-mono font-bold text-xs px-2.5 py-1 rounded-md ${
-                          ar.rate >= 90 
-                            ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400' 
-                            : ar.rate >= 75
-                            ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400'
-                            : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400'
-                        }`}>
-                          {ar.rate}%
-                        </span>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-[#252538] text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-neutral-800">
+                    <th className="py-3 px-6 w-28">NIS</th>
+                    <th className="py-3 px-6">Nama Siswa</th>
+                    <th className="py-3 px-4 text-center text-emerald-600">Hadir</th>
+                    <th className="py-3 px-4 text-center text-blue-600">Izin</th>
+                    <th className="py-3 px-4 text-center text-amber-600">Sakit</th>
+                    <th className="py-3 px-4 text-center text-rose-600">Alfa</th>
+                    <th className="py-3 px-4 text-center">Total Sesi</th>
+                    <th className="py-3 px-6 text-center">% Kehadiran</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-neutral-800 text-sm">
+                  {attendanceReportList.length > 0 ? (
+                    attendanceReportList.map((ar) => (
+                      <tr key={ar.student.id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
+                        <td className="py-3.5 px-6 font-mono text-xs">{ar.student.nis}</td>
+                        <td className="py-3.5 px-6 font-bold">{ar.student.name}</td>
+                        <td className="py-3.5 px-4 text-center font-mono font-semibold text-emerald-600">{ar.hadir}</td>
+                        <td className="py-3.5 px-4 text-center font-mono font-semibold text-blue-500">{ar.izin}</td>
+                        <td className="py-3.5 px-4 text-center font-mono font-semibold text-amber-500">{ar.sakit}</td>
+                        <td className="py-3.5 px-4 text-center font-mono font-semibold text-rose-500">{ar.alfa}</td>
+                        <td className="py-3.5 px-4 text-center font-mono">{ar.total}</td>
+                        <td className="py-3.5 px-6 text-center">
+                          <span className={`font-mono font-bold text-xs px-2.5 py-1 rounded-md ${
+                            ar.rate >= 90 
+                              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400' 
+                              : ar.rate >= 75
+                              ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400'
+                              : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400'
+                          }`}>
+                            {ar.rate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-gray-400">
+                        Tidak ada data absensi untuk filter terpilih.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="py-12 text-center text-gray-400">
-                      Tidak ada data absensi untuk filter terpilih.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {renderSignatureBlock()}
@@ -554,46 +601,48 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
       {/* REPORT 3: LAPORAN JURNAL MENGAJAR */}
       {currentMenu === 'report_journals' && (
-        <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300">
-          <div className="p-4 border-b border-gray-50 dark:border-neutral-800 bg-gray-50/20 text-xs font-bold text-gray-700 dark:text-gray-300">
-            Daftar Jurnal Mengajar Terdaftar: {filterStartDate} s/d {filterEndDate}
-          </div>
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent">
+            <div className="p-4 border-b border-gray-50 dark:border-neutral-800 bg-gray-50/20 text-xs font-bold text-gray-700 dark:text-gray-300 print:hidden">
+              Daftar Jurnal Mengajar Terdaftar: {filterStartDate} s/d {filterEndDate}
+            </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-[#252538] text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-neutral-800">
-                  <th className="py-3 px-6 w-28">Tanggal</th>
-                  <th className="py-3 px-6 w-24">Jam</th>
-                  <th className="py-3 px-6">Materi Pembelajaran</th>
-                  <th className="py-3 px-6">Metode</th>
-                  <th className="py-3 px-4 text-center w-24">Hadir</th>
-                  <th className="py-3 px-6">Catatan Guru</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-neutral-800 text-sm">
-                {filteredJournals.length > 0 ? (
-                  filteredJournals.map((j) => (
-                    <tr key={j.id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
-                      <td className="py-3.5 px-6 font-mono text-xs">{j.date}</td>
-                      <td className="py-3.5 px-6 font-mono text-xs text-gray-400">{j.hour}</td>
-                      <td className="py-3.5 px-6 font-medium">{j.topic}</td>
-                      <td className="py-3.5 px-6 text-gray-600 dark:text-gray-400">{j.method}</td>
-                      <td className="py-3.5 px-4 text-center font-mono">{j.present_count}</td>
-                      <td className="py-3.5 px-6 text-xs text-gray-500 dark:text-gray-400 italic">
-                        {j.note ? `"${j.note}"` : '-'}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-[#252538] text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-neutral-800">
+                    <th className="py-3 px-6 w-28">Tanggal</th>
+                    <th className="py-3 px-6 w-24">Jam</th>
+                    <th className="py-3 px-6">Materi Pembelajaran</th>
+                    <th className="py-3 px-6">Metode</th>
+                    <th className="py-3 px-4 text-center w-24">Hadir</th>
+                    <th className="py-3 px-6">Catatan Guru</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-neutral-800 text-sm">
+                  {filteredJournals.length > 0 ? (
+                    filteredJournals.map((j) => (
+                      <tr key={j.id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
+                        <td className="py-3.5 px-6 font-mono text-xs">{j.date}</td>
+                        <td className="py-3.5 px-6 font-mono text-xs text-gray-400">{j.hour}</td>
+                        <td className="py-3.5 px-6 font-medium">{j.topic}</td>
+                        <td className="py-3.5 px-6 text-gray-600 dark:text-gray-400">{j.method}</td>
+                        <td className="py-3.5 px-4 text-center font-mono">{j.present_count}</td>
+                        <td className="py-3.5 px-6 text-xs text-gray-500 dark:text-gray-400 italic">
+                          {j.note ? `"${j.note}"` : '-'}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-gray-400">
+                        Tidak ada catatan jurnal dalam periode & filter terpilih.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-gray-400">
-                      Tidak ada catatan jurnal dalam periode & filter terpilih.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {renderSignatureBlock()}

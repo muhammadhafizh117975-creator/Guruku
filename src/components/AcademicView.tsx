@@ -45,6 +45,17 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
   const [classes] = useState<Class[]>(() => getFromStorage<Class[]>('guruku_classes', []));
   const [students] = useState<Student[]>(() => getFromStorage<Student[]>('guruku_students', []));
   
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(() => {
+    try {
+      const settingsStr = localStorage.getItem('guruku_app_settings');
+      if (settingsStr) {
+        const parsed = JSON.parse(settingsStr);
+        if (parsed.academicYear) return parsed.academicYear;
+      }
+    } catch (e) {}
+    return '';
+  });
+
   // Selection Context
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -143,8 +154,17 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
   // Set default subject and class if available
   useEffect(() => {
     if (subjects.length > 0 && !selectedSubject) setSelectedSubject(subjects[0].id);
-    if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0].id);
-  }, [subjects, classes]);
+    
+    const yearFilteredClasses = classes.filter(c => !selectedAcademicYear || c.academic_year === selectedAcademicYear);
+    if (yearFilteredClasses.length > 0) {
+      // Check if selectedClass is already in the filtered set, if not, select first
+      if (!selectedClass || !yearFilteredClasses.some(c => c.id === selectedClass)) {
+        setSelectedClass(yearFilteredClasses[0].id);
+      }
+    } else if (classes.length > 0 && !selectedClass) {
+      setSelectedClass(classes[0].id);
+    }
+  }, [subjects, classes, selectedAcademicYear]);
 
   // Load Grades for selected Subject & Class
   useEffect(() => {
@@ -542,6 +562,33 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
       <div className="bg-white dark:bg-[#2b2c40] p-5 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs flex flex-wrap gap-4 items-center justify-between transition-colors duration-300 print:hidden">
         
         <div className="flex flex-wrap gap-4 items-center">
+          {/* Select Tahun Pelajaran */}
+          <div className="space-y-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Tahun Pelajaran</label>
+            <div className="relative">
+              <select
+                value={selectedAcademicYear}
+                onChange={(e) => {
+                  const newYear = e.target.value;
+                  setSelectedAcademicYear(newYear);
+                  // Auto-select first class in the new year
+                  const filteredCls = classes.filter(c => !newYear || c.academic_year === newYear);
+                  if (filteredCls.length > 0) {
+                    setSelectedClass(filteredCls[0].id);
+                  } else {
+                    setSelectedClass('');
+                  }
+                }}
+                className="bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 pl-3 pr-8 text-xs focus:outline-none focus:border-[#696cff] min-w-[140px] font-medium"
+              >
+                <option value="">Semua Tahun</option>
+                {Array.from(new Set(classes.map(c => c.academic_year).filter(Boolean))).map(yr => (
+                  <option key={yr} value={yr}>Tahun Pelajaran {yr}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Select Mata Pelajaran */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Mata Pelajaran</label>
@@ -567,9 +614,12 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
                 onChange={(e) => setSelectedClass(e.target.value)}
                 className="bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 pl-3 pr-8 text-xs focus:outline-none focus:border-[#696cff] min-w-[120px]"
               >
-                {classes.map(cls => (
-                  <option key={cls.id} value={cls.id}>{cls.name}</option>
-                ))}
+                {classes
+                  .filter(cls => !selectedAcademicYear || cls.academic_year === selectedAcademicYear)
+                  .map(cls => (
+                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                  ))
+                }
               </select>
             </div>
           </div>
