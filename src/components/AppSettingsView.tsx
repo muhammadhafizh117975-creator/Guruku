@@ -31,7 +31,9 @@ import {
   FileJson,
   Loader2,
   ExternalLink,
-  Plus
+  Plus,
+  Copy,
+  Check
 } from 'lucide-react';
 import { 
   getFromStorage, 
@@ -82,6 +84,10 @@ export default function AppSettingsView() {
   });
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  
+  // Domain Authorization Guide States
+  const [showDomainAuthModal, setShowDomainAuthModal] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Google Integration States
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
@@ -558,8 +564,17 @@ export default function AppSettingsView() {
           ) : (
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           )}
-          <div>
+          <div className="flex-1">
             <p className="text-xs font-semibold">{notification.message}</p>
+            {notification.type === 'error' && (notification.message.includes('otorisasi') || notification.message.includes('unauthorized-domain')) && (
+              <button
+                onClick={() => setShowDomainAuthModal(true)}
+                className="mt-2 text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Buka Panduan Otorisasi Domain di Firebase</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -916,8 +931,8 @@ export default function AppSettingsView() {
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center py-2 text-center">
-                  <p className="text-xs text-gray-500 mb-3 font-semibold">Integrasikan akun Google Anda untuk mengaktifkan sinkronisasi otomatis</p>
+                <div className="flex flex-col items-center py-2 text-center space-y-2">
+                  <p className="text-xs text-gray-500 font-semibold">Integrasikan akun Google Anda untuk mengaktifkan sinkronisasi otomatis</p>
                   <button
                     disabled={isConnectingGoogle}
                     onClick={handleGoogleSignIn}
@@ -929,6 +944,12 @@ export default function AppSettingsView() {
                       <Cloud className="w-4 h-4 text-[#696cff]" />
                     )}
                     <span>Hubungkan ke Google Workspace</span>
+                  </button>
+                  <button
+                    onClick={() => setShowDomainAuthModal(true)}
+                    className="text-[10px] text-gray-400 hover:text-indigo-500 hover:underline transition mt-1 cursor-pointer"
+                  >
+                    Masalah koneksi? Lihat panduan otorisasi domain Firebase
                   </button>
                 </div>
               )}
@@ -1105,6 +1126,96 @@ export default function AppSettingsView() {
 
         </div>
       </div>
+
+      {/* DOMAIN AUTHORIZATION INSTRUCTIONS MODAL */}
+      {showDomainAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-neutral-800 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Panduan Otorisasi Domain Firebase</h3>
+              </div>
+              <button 
+                onClick={() => setShowDomainAuthModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-600 dark:text-gray-300 space-y-3 leading-relaxed">
+              <p>
+                Firebase mengamankan autentikasi Google dengan membatasi login hanya dari domain terdaftar. Karena aplikasi berjalan di server preview kontainer, Anda perlu mendaftarkan domain preview ini di Firebase Console agar tombol sinkronisasi dapat berjalan lancar.
+              </p>
+
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3 space-y-2">
+                <h4 className="font-bold text-amber-800 dark:text-amber-400">Langkah Otorisasi:</h4>
+                <ol className="list-decimal pl-4 space-y-1">
+                  <li>Buka <strong>Firebase Console</strong> proyek Anda.</li>
+                  <li>Masuk ke menu <strong>Authentication</strong> &gt; Pilih tab <strong>Settings</strong> &gt; Pilih <strong>Authorized domains</strong> (Domain resmi).</li>
+                  <li>Klik tombol <strong>Add domain</strong> (Tambah domain), masukkan masing-masing domain berikut di bawah ini, lalu klik <strong>Add</strong>.</li>
+                </ol>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <h4 className="font-bold text-gray-700 dark:text-gray-300">Domain yang Perlu Ditambahkan:</h4>
+                
+                {/* Dev Domain */}
+                <div className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-[#232333] rounded-xl border border-gray-100 dark:border-neutral-800">
+                  <div className="truncate pr-2">
+                    <span className="block text-[9px] font-bold text-gray-400 uppercase">Domain Development</span>
+                    <code className="text-xs font-mono text-[#696cff] truncate">{window.location.hostname}</code>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.hostname);
+                      setCopiedField('dev');
+                      setTimeout(() => setCopiedField(null), 2000);
+                    }}
+                    className="p-1.5 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer shrink-0"
+                    title="Salin Domain"
+                  >
+                    {copiedField === 'dev' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Pre Domain */}
+                <div className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-[#232333] rounded-xl border border-gray-100 dark:border-neutral-800">
+                  <div className="truncate pr-2">
+                    <span className="block text-[9px] font-bold text-gray-400 uppercase">Domain Shared Preview</span>
+                    <code className="text-xs font-mono text-[#696cff] truncate">{window.location.hostname.replace('ais-dev-', 'ais-pre-')}</code>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.hostname.replace('ais-dev-', 'ais-pre-'));
+                      setCopiedField('pre');
+                      setTimeout(() => setCopiedField(null), 2000);
+                    }}
+                    className="p-1.5 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer shrink-0"
+                    title="Salin Domain"
+                  >
+                    {copiedField === 'pre' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-gray-400 italic">
+                * Setelah menambahkan domain, harap tunggu sekitar 1 menit agar Firebase menyelaraskan pengaturan, lalu klik tombol "Hubungkan ke Google Workspace" kembali.
+              </p>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowDomainAuthModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-[#232333] dark:hover:bg-[#232333]/80 text-gray-700 dark:text-gray-300 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Tutup Panduan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

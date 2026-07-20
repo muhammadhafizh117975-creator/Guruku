@@ -29,6 +29,11 @@
 
 /* Print Overrides to ensure gorgeous PDFs */
 @media print {
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+
   /* Hide non-printable panels completely */
   aside, 
   header, 
