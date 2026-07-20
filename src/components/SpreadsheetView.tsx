@@ -21,7 +21,11 @@ import {
   Award,
   GraduationCap,
   CalendarCheck,
-  FileDown
+  FileDown,
+  RefreshCw,
+  Upload,
+  Download,
+  Database
 } from 'lucide-react';
 
 interface GuideStep {
@@ -200,6 +204,141 @@ export default function SpreadsheetView() {
 
         </div>
 
+      </div>
+
+      {/* Google Sheets Live Synchronization Guide */}
+      <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs p-6 space-y-6 transition-colors">
+        <div className="flex items-center gap-3 border-b border-gray-50 dark:border-neutral-800 pb-4">
+          <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 rounded-xl">
+            <FileSpreadsheet className="w-5.5 h-5.5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">
+              Panduan Google Sheets Live Synchronization
+            </h3>
+            <p className="text-[11px] text-gray-400 dark:text-gray-400">
+              Sinkronisasikan database lokal GuruKu dengan Google Spreadsheet secara real-time demi kemudahan backup dan akses multi-perangkat.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Alur Sinkronisasi */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-[#696cff]" />
+              Langkah Menghubungkan Google Sheets
+            </h4>
+            
+            <div className="space-y-3.5">
+              <div className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  1
+                </div>
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-800 dark:text-gray-200">Hubungkan Akun Google</h5>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                    Klik tombol <strong>"Hubungkan ke Google Workspace"</strong> di halaman <strong>Pengaturan Aplikasi</strong> atau tombol Google Login di bar atas. Setujui izin akses ke Google Drive & Google Sheets.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  2
+                </div>
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-800 dark:text-gray-200">Buat Spreadsheet Baru</h5>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                    Tekan tombol <strong>"Buat Spreadsheet Baru"</strong> di bagian integrasi Google Sheets. Aplikasi akan otomatis membuat berkas Excel Spreadsheet resmi bernama <code>GuruKu_Database</code> di Google Drive Anda.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  3
+                </div>
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-800 dark:text-gray-200">Push & Pull Data</h5>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                    Gunakan tombol <strong>"Push ke Sheets"</strong> untuk mengunggah seluruh data lokal Anda ke cloud, atau <strong>"Pull dari Sheets"</strong> untuk mengunduh kembali data jika Anda berpindah ke komputer atau perangkat lain.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Konsep Data & Lembar Spreadsheet */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Database className="w-4 h-4 text-emerald-500" />
+              Struktur Lembar (Sheets) & Cadangan
+            </h4>
+            
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              Google Spreadsheet yang terbentuk akan memiliki 8 Lembar Utama (Sheet Tabs) yang tersusun rapi sebagai berikut:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 text-[10px] font-mono bg-gray-50 dark:bg-[#232333]/60 p-3 rounded-xl border border-gray-100 dark:border-neutral-800/80">
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>1. Profil Guru</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>2. Mata Pelajaran</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>3. Kelas</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>4. Daftar Siswa</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>5. Rekap Nilai</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>6. Presensi Harian</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>7. Jurnal Mengajar</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>8. Pengaturan</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 rounded-xl border border-indigo-100/50 text-[11px] leading-relaxed">
+              <strong>Tips Backup Otomatis:</strong> Selain sinkronisasi Google Sheets, aplikasi ini juga secara otomatis mengunggah file cadangan JSON terenkripsi ke folder Drive Anda bernama <code>/GuruKu_Backups</code> setiap kali Anda memperbarui data penting.
+            </div>
+          </div>
+        </div>
+
+        {/* Tips & Pemecahan Masalah */}
+        <div className="bg-gray-50 dark:bg-[#232333]/30 rounded-xl p-4 border border-gray-100 dark:border-neutral-800/80 text-[11px] space-y-2">
+          <p className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+            <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
+            Tips & Pemecahan Masalah (Troubleshooting)
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-gray-500 dark:text-gray-400 leading-relaxed">
+            <li>
+              <strong>Masalah Izin Akses (Popup Blocked):</strong> Saat pertama kali menghubungkan Google Workspace, browser Anda mungkin memblokir popup otorisasi. Pastikan untuk mengizinkan pop-up dari situs ini di pengaturan browser Anda.
+            </li>
+            <li>
+              <strong>Bekerja Multi-perangkat:</strong> Jika Anda selesai memasukkan nilai siswa di laptop sekolah, klik <strong>Push ke Sheets</strong>. Saat sampai di rumah, buka GuruKu di komputer rumah, login dengan akun Google yang sama, lalu klik <strong>Pull dari Sheets</strong> untuk mengambil hasil input sebelumnya.
+            </li>
+            <li>
+              <strong>Hindari Mengubah Nama Kolom:</strong> Anda bebas menambahkan atau mengubah isi sel di Google Sheets secara langsung melalui Google Drive. Namun, mohon hindari mengubah nama kolom/header lembar agar proses "Pull" kembali ke aplikasi tidak mengalami kendala.
+            </li>
+          </ul>
+        </div>
       </div>
 
     </div>

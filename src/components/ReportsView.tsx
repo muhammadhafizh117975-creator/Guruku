@@ -40,6 +40,39 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
     academicYear: '2025/2026'
   });
 
+  // Get unique academic years from class list + active settings + 3 years into the future
+  const getAcademicYearsList = () => {
+    const yearsSet = new Set<string>();
+    classes.forEach(c => {
+      if (c.academic_year) yearsSet.add(c.academic_year.trim());
+    });
+
+    let activeYear = (appSettings && appSettings.academicYear) || '2025/2026';
+    if (activeYear) {
+      yearsSet.add(activeYear.trim());
+      const match = activeYear.trim().match(/^(\d{4})([/-])(\d{4})$/);
+      if (match) {
+        const startYear = parseInt(match[1]);
+        const sep = match[2];
+        const endYear = parseInt(match[3]);
+        for (let i = 1; i <= 3; i++) {
+          yearsSet.add(`${startYear + i}${sep}${endYear + i}`);
+        }
+      } else {
+        const numberMatch = activeYear.match(/\d{4}/);
+        if (numberMatch) {
+          const yearInt = parseInt(numberMatch[0]);
+          for (let i = 1; i <= 3; i++) {
+            yearsSet.add(activeYear.replace(String(yearInt), String(yearInt + i)));
+          }
+        }
+      }
+    }
+    return Array.from(yearsSet).filter(Boolean).sort();
+  };
+
+  const uniqueAcademicYears = getAcademicYearsList();
+
   // Filter States
   const [filterAcademicYear, setFilterAcademicYear] = useState<string>(() => {
     return appSettings.academicYear || '';
@@ -307,7 +340,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
               className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#696cff] font-medium"
             >
               <option value="">Semua Tahun</option>
-              {Array.from(new Set(classes.map(c => c.academic_year).filter(Boolean))).map(yr => (
+              {uniqueAcademicYears.map(yr => (
                 <option key={yr} value={yr}>Tahun Pelajaran {yr}</option>
               ))}
             </select>

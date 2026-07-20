@@ -388,8 +388,46 @@ export default function DataMasterView({ currentMenu }: DataMasterViewProps) {
     }
   };
 
-  // Get unique academic years from class list
-  const uniqueAcademicYears = Array.from(new Set(classes.map(c => c.academic_year).filter(Boolean)));
+  // Get unique academic years from class list + active settings + 3 years into the future
+  const getAcademicYearsList = () => {
+    const yearsSet = new Set<string>();
+    classes.forEach(c => {
+      if (c.academic_year) yearsSet.add(c.academic_year.trim());
+    });
+
+    let activeYear = '2025/2026';
+    try {
+      const settingsStr = localStorage.getItem('guruku_app_settings');
+      if (settingsStr) {
+        const parsed = JSON.parse(settingsStr);
+        if (parsed.academicYear) activeYear = parsed.academicYear.trim();
+      }
+    } catch (e) {}
+
+    if (activeYear) {
+      yearsSet.add(activeYear);
+      const match = activeYear.match(/^(\d{4})([/-])(\d{4})$/);
+      if (match) {
+        const startYear = parseInt(match[1]);
+        const sep = match[2];
+        const endYear = parseInt(match[3]);
+        for (let i = 1; i <= 3; i++) {
+          yearsSet.add(`${startYear + i}${sep}${endYear + i}`);
+        }
+      } else {
+        const numberMatch = activeYear.match(/\d{4}/);
+        if (numberMatch) {
+          const yearInt = parseInt(numberMatch[0]);
+          for (let i = 1; i <= 3; i++) {
+            yearsSet.add(activeYear.replace(String(yearInt), String(yearInt + i)));
+          }
+        }
+      }
+    }
+    return Array.from(yearsSet).filter(Boolean).sort();
+  };
+
+  const uniqueAcademicYears = getAcademicYearsList();
 
   // Filtering of Classes
   const filteredClasses = classes.filter(cls => {
@@ -863,9 +901,15 @@ export default function DataMasterView({ currentMenu }: DataMasterViewProps) {
                       type="text"
                       value={clsYear}
                       onChange={(e) => setClsYear(e.target.value)}
+                      list="academic-years-datalist"
                       placeholder="Contoh: 2025/2026"
                       className="w-full px-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
                     />
+                    <datalist id="academic-years-datalist">
+                      {uniqueAcademicYears.map(yr => (
+                        <option key={yr} value={yr} />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 

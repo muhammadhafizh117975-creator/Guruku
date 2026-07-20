@@ -93,7 +93,7 @@ export default function Navbar({ onToggleSidebar, darkMode, onToggleDarkMode, on
           <Clock className="w-4 h-4 text-[#696cff]" />
           <span>{formattedDate}</span>
           <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-[#696cff] font-mono text-xs ml-1">
-            {formattedTime} UTC
+            {formattedTime} WIB
           </span>
         </div>
       </div>
