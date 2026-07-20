@@ -88,8 +88,37 @@ export default function App() {
     );
   }
 
+  // Load print margins dynamically from local storage
+  let printMargins = { top: 1.0, bottom: 1.0, left: 1.0, right: 1.0 };
+  try {
+    const settingsStr = localStorage.getItem('guruku_app_settings');
+    if (settingsStr) {
+      const settings = JSON.parse(settingsStr);
+      printMargins = {
+        top: typeof settings.printMarginTop === 'number' ? settings.printMarginTop : 1.0,
+        bottom: typeof settings.printMarginBottom === 'number' ? settings.printMarginBottom : 1.0,
+        left: typeof settings.printMarginLeft === 'number' ? settings.printMarginLeft : 1.0,
+        right: typeof settings.printMarginRight === 'number' ? settings.printMarginRight : 1.0,
+      };
+    }
+  } catch (e) {
+    console.error('Failed to parse app settings for margins:', e);
+  }
+
   return (
     <div className="flex h-screen bg-[#f5f5f9] dark:bg-[#232333] overflow-hidden transition-colors duration-300">
+      {/* Dynamic print margin styles based on App Settings */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4;
+            margin-top: ${printMargins.top}cm !important;
+            margin-bottom: ${printMargins.bottom}cm !important;
+            margin-left: ${printMargins.left}cm !important;
+            margin-right: ${printMargins.right}cm !important;
+          }
+        }
+      `}</style>
       
       {/* 1. Sidebar Navigation */}
       <Sidebar

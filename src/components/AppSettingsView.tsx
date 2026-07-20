@@ -33,7 +33,8 @@ import {
   ExternalLink,
   Plus,
   Copy,
-  Check
+  Check,
+  Sliders
 } from 'lucide-react';
 import { 
   getFromStorage, 
@@ -66,6 +67,10 @@ interface AppSettings {
   headmasterName?: string;
   headmasterNip?: string;
   headmasterNipType?: 'NIP' | 'NUKS';
+  printMarginTop?: number;
+  printMarginBottom?: number;
+  printMarginLeft?: number;
+  printMarginRight?: number;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -75,7 +80,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   academicYear: '2025/2026',
   headmasterName: 'Drs. H. Mulyadi, M.Pd.',
   headmasterNip: '19710312 199702 1 002',
-  headmasterNipType: 'NUKS'
+  headmasterNipType: 'NUKS',
+  printMarginTop: 1.0,
+  printMarginBottom: 1.0,
+  printMarginLeft: 1.0,
+  printMarginRight: 1.0
 };
 
 export default function AppSettingsView() {
@@ -752,11 +761,81 @@ export default function AppSettingsView() {
                 value={settings.academicYear}
                 onChange={(e) => handleSaveSettings({ ...settings, academicYear: e.target.value })}
                 placeholder="Contoh: 2025/2026"
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200 font-medium"
               />
               <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
                 Menetapkan tahun ajaran default yang digunakan saat membuat kelas baru dan pencetakan berkas.
               </p>
+            </div>
+          </div>
+
+          {/* Card 1.5: Margin Cetak Laporan (A4) */}
+          <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-4 transition-colors">
+            <div className="flex items-center gap-2 border-b border-gray-50 dark:border-neutral-800 pb-3">
+              <Sliders className="w-4.5 h-4.5 text-[#696cff]" />
+              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Margin Cetak Laporan (A4)</h4>
+            </div>
+
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Atur batas margin halaman cetak PDF/Laporan dalam satuan centimeter (cm). Pengaturan ini akan langsung diterapkan saat mencetak.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Atas (Top) - cm
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={settings.printMarginTop ?? 1.0}
+                  onChange={(e) => handleSaveSettings({ ...settings, printMarginTop: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Bawah (Bottom) - cm
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={settings.printMarginBottom ?? 1.0}
+                  onChange={(e) => handleSaveSettings({ ...settings, printMarginBottom: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Kiri (Left) - cm
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={settings.printMarginLeft ?? 1.0}
+                  onChange={(e) => handleSaveSettings({ ...settings, printMarginLeft: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Kanan (Right) - cm
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={settings.printMarginRight ?? 1.0}
+                  onChange={(e) => handleSaveSettings({ ...settings, printMarginRight: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+                />
+              </div>
             </div>
           </div>
 
