@@ -562,6 +562,31 @@ export default function AppSettingsView() {
     }
   };
 
+  const handleClearClassStudentAdminData = () => {
+    if (confirm('Apakah Anda yakin ingin menghapus seluruh data kelas, siswa, nilai, absensi, jurnal mengajar, dan modul ajar? Data master mata pelajaran dan profil guru akan TETAP dipertahankan. Tindakan ini tidak dapat dibatalkan.')) {
+      // Set reset active flag in sessionStorage to block auto-backup triggers on unmount
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('guruku_reset_active', 'true');
+      }
+      
+      saveToStorage('guruku_classes', []);
+      saveToStorage('guruku_students', []);
+      saveToStorage('guruku_grades', []);
+      saveToStorage('guruku_attendance', []);
+      saveToStorage('guruku_teaching_journals', []);
+      saveToStorage('guruku_modul_ajar', []);
+      
+      setNotification({
+        type: 'success',
+        message: 'Seluruh data kelas, siswa, dan administrasi berhasil dihapus! Memuat ulang...'
+      });
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -886,6 +911,15 @@ export default function AppSettingsView() {
                   onChange={handleImportJSON}
                 />
               </label>
+
+              <button
+                onClick={handleClearClassStudentAdminData}
+                className="w-full py-2 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-50 dark:hover:bg-amber-950/20 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
+                title="Hapus data master kelas, siswa, serta administrasi guru (nilai, absensi, jurnal, modul ajar) terkecuali mata pelajaran dan profil"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Hapus Data Kelas, Siswa & Adm</span>
+              </button>
 
               <button
                 onClick={handleResetDatabase}
