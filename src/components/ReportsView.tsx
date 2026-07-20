@@ -355,11 +355,11 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
       {/* 2. Print Header layout (Print only) with customized Kop Surat */}
       <div className="hidden print:block text-black mb-6">
         {appSettings.logoDataUrl ? (
-          <div className="w-full text-center mb-5">
+          <div className="w-full mb-5">
             <img 
               src={appSettings.logoDataUrl} 
               alt="Kop Surat" 
-              className="w-full h-auto max-h-32 object-contain mx-auto"
+              className="w-full h-auto block"
               referrerPolicy="no-referrer"
             />
           </div>

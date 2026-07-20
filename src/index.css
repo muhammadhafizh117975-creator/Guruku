@@ -31,7 +31,7 @@
 @media print {
   @page {
     size: A4;
-    margin: 2cm;
+    margin: 1cm;
   }
 
   /* Hide non-printable panels completely */
