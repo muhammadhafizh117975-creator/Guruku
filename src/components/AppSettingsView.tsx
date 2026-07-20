@@ -269,12 +269,12 @@ export default function AppSettingsView() {
       if (errMsg.includes('auth/unauthorized-domain') || errMsg.includes('unauthorized-domain')) {
         setNotification({
           type: 'error',
-          message: 'Domain belum diotorisasi Firebase. Kami baru saja menyelesaikan konfigurasi OAuth. Harap tunggu 1-2 menit untuk sinkronisasi domain, lalu coba lagi!'
+          message: 'Domain belum diotorisasi Firebase ATAU Anda sedang membuka di dalam iFrame/Preview AI Studio. Harap buka aplikasi di TAB BARU (klik tombol panah "Open in new tab" di kanan atas panel preview AI Studio) dan pastikan penulisan domain di Firebase Console tidak menyertakan https:// atau tanda garis miring (/).'
         });
       } else {
         setNotification({
           type: 'error',
-          message: `Gagal masuk ke Google: ${errMsg}`
+          message: `Gagal masuk ke Google: ${errMsg}. Jika menggunakan Preview AI Studio, silakan coba buka aplikasi di TAB BARU terlebih dahulu.`
         });
       }
     } finally {
@@ -1275,16 +1275,29 @@ export default function AppSettingsView() {
             </div>
 
             <div className="text-xs text-gray-600 dark:text-gray-300 space-y-3 leading-relaxed">
+              <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl p-3 space-y-1 text-rose-700 dark:text-rose-400 font-medium">
+                <p className="font-bold">⚠️ SOLUSI UTAMA (Iframe Sandbox):</p>
+                <p>
+                  Jika Anda sedang berada di dalam jendela <strong>Preview/Iframe AI Studio</strong>, proses login Google pasti akan diblokir oleh browser. Anda <strong>WAJIB</strong> membuka aplikasi ini di <strong>TAB BARU</strong>.
+                </p>
+                <p className="font-bold mt-1 text-[11px] underline">
+                  Caranya: Klik ikon panah keluar "Open in new tab" di pojok kanan atas layar panel preview AI Studio Anda!
+                </p>
+              </div>
+
               <p>
                 Firebase mengamankan autentikasi Google dengan membatasi login hanya dari domain terdaftar. Karena aplikasi berjalan di server preview kontainer, Anda perlu mendaftarkan domain preview ini di Firebase Console agar tombol sinkronisasi dapat berjalan lancar.
               </p>
 
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3 space-y-2">
-                <h4 className="font-bold text-amber-800 dark:text-amber-400">Langkah Otorisasi:</h4>
+                <h4 className="font-bold text-amber-800 dark:text-amber-400">Langkah Otorisasi & Format Pengisian:</h4>
                 <ol className="list-decimal pl-4 space-y-1">
                   <li>Buka <strong>Firebase Console</strong> proyek Anda.</li>
-                  <li>Masuk ke menu <strong>Authentication</strong> &gt; Pilih tab <strong>Settings</strong> &gt; Pilih <strong>Authorized domains</strong> (Domain resmi).</li>
-                  <li>Klik tombol <strong>Add domain</strong> (Tambah domain), masukkan masing-masing domain berikut di bawah ini, lalu klik <strong>Add</strong>.</li>
+                  <li>Masuk ke menu <strong>Authentication</strong> &gt; Pilih tab <strong>Settings</strong> &gt; Pilih <strong>Authorized domains</strong>.</li>
+                  <li>Klik tombol <strong>Add domain</strong> (Tambah domain).</li>
+                  <li>
+                    Salin domain di bawah dan masukkan <strong>HANYA nama domainnya saja</strong>. Jangan tambahkan <code className="bg-amber-100 dark:bg-amber-900 px-1 py-0.5 rounded text-amber-800">https://</code> atau tanda garis miring <code className="bg-amber-100 dark:bg-amber-900 px-1 py-0.5 rounded text-amber-800">/</code> di akhir!
+                  </li>
                 </ol>
               </div>
 
