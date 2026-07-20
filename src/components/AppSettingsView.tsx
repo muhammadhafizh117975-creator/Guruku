@@ -63,6 +63,7 @@ interface AppSettings {
   academicYear: string;
   headmasterName?: string;
   headmasterNip?: string;
+  headmasterNipType?: 'NIP' | 'NUKS';
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -71,7 +72,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   schoolContact: '',
   academicYear: '2025/2026',
   headmasterName: 'Drs. H. Mulyadi, M.Pd.',
-  headmasterNip: '19710312 199702 1 002'
+  headmasterNip: '19710312 199702 1 002',
+  headmasterNipType: 'NUKS'
 };
 
 export default function AppSettingsView() {
@@ -604,13 +606,37 @@ export default function AppSettingsView() {
 
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
-                    NIP Kepala Sekolah
+                    Identitas Kepala Sekolah (Pilih salah satu)
                   </label>
+                  <div className="flex gap-4 mb-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
+                      <input
+                        type="radio"
+                        name="headmasterNipType"
+                        value="NIP"
+                        checked={(settings.headmasterNipType ?? 'NUKS') === 'NIP'}
+                        onChange={() => handleSaveSettings({ ...settings, headmasterNipType: 'NIP' })}
+                        className="text-[#696cff] focus:ring-[#696cff]"
+                      />
+                      <span>NIP (PNS)</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
+                      <input
+                        type="radio"
+                        name="headmasterNipType"
+                        value="NUKS"
+                        checked={(settings.headmasterNipType ?? 'NUKS') === 'NUKS'}
+                        onChange={() => handleSaveSettings({ ...settings, headmasterNipType: 'NUKS' })}
+                        className="text-[#696cff] focus:ring-[#696cff]"
+                      />
+                      <span>NUKS (Non-PNS)</span>
+                    </label>
+                  </div>
                   <input
                     type="text"
                     value={settings.headmasterNip ?? ''}
                     onChange={(e) => handleSaveSettings({ ...settings, headmasterNip: e.target.value })}
-                    placeholder="Contoh: 19710312 199702 1 002"
+                    placeholder={(settings.headmasterNipType ?? 'NUKS') === 'NIP' ? 'Contoh NIP: 19710312 199702 1 002' : 'Contoh NUKS: 2102120001'}
                     className="w-full px-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200 font-medium"
                   />
                 </div>

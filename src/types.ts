@@ -9,6 +9,7 @@ export interface Profile {
   email: string;
   hp: string;
   photoUrl: string;
+  nip_nuptk_type?: 'NIP' | 'NUPTK';
 }
 
 export interface Subject {

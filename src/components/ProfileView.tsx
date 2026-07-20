@@ -30,6 +30,7 @@ export default function ProfileView() {
   // Inputs
   const [name, setName] = useState(profile.name);
   const [nip, setNip] = useState(profile.nip_nuptk);
+  const [nipNuptkType, setNipNuptkType] = useState<'NIP' | 'NUPTK'>(profile.nip_nuptk_type || 'NIP');
   const [email, setEmail] = useState(profile.email);
   const [hp, setHp] = useState(profile.hp);
   const [photo, setPhoto] = useState(profile.photoUrl);
@@ -58,6 +59,7 @@ export default function ProfileView() {
     const updated: Profile = {
       name,
       nip_nuptk: nip,
+      nip_nuptk_type: nipNuptkType,
       email,
       hp,
       photoUrl: photo
@@ -138,7 +140,7 @@ export default function ProfileView() {
             <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base">{profile.name}</h3>
             <p className="text-xs text-gray-400 mt-1">{profile.email}</p>
             <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-[#696cff] text-[10px] font-bold rounded-full mt-3 uppercase tracking-wider">
-              NIP: {profile.nip_nuptk || 'BELUM DIATUR'}
+              {profile.nip_nuptk_type || 'NIP'}: {profile.nip_nuptk || 'BELUM DIATUR'}
             </span>
 
             {/* Quick stats list */}
@@ -209,7 +211,31 @@ export default function ProfileView() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">NIP atau NUPTK</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Pilihan Identitas Guru</label>
+                  <div className="flex gap-4 mb-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
+                      <input
+                        type="radio"
+                        name="nipNuptkType"
+                        value="NIP"
+                        checked={nipNuptkType === 'NIP'}
+                        onChange={() => setNipNuptkType('NIP')}
+                        className="text-[#696cff] focus:ring-[#696cff]"
+                      />
+                      <span>NIP (PNS)</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
+                      <input
+                        type="radio"
+                        name="nipNuptkType"
+                        value="NUPTK"
+                        checked={nipNuptkType === 'NUPTK'}
+                        onChange={() => setNipNuptkType('NUPTK')}
+                        className="text-[#696cff] focus:ring-[#696cff]"
+                      />
+                      <span>NUPTK (Non-PNS)</span>
+                    </label>
+                  </div>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
                       <CreditCard className="w-4 h-4" />
@@ -218,7 +244,7 @@ export default function ProfileView() {
                       type="text"
                       value={nip}
                       onChange={(e) => setNip(e.target.value)}
-                      placeholder="Contoh: 19920824 201803 1 004"
+                      placeholder={nipNuptkType === 'NIP' ? 'Contoh NIP: 19920824 201803 1 004' : 'Contoh NUPTK: 1029310293810293'}
                       className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-xl text-xs focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
                     />
                   </div>

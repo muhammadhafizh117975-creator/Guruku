@@ -248,7 +248,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
           </div>
           <div>
             <p className="font-bold underline">{headmasterName}</p>
-            <p className="text-[10px] font-mono">NIP. {headmasterNip}</p>
+            <p className="text-[10px] font-mono">{(appSettings.headmasterNipType || 'NUKS')}. {headmasterNip}</p>
           </div>
         </div>
 
@@ -259,7 +259,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
           </div>
           <div>
             <p className="font-bold underline">{teacherProfile.name}</p>
-            <p className="text-[10px] font-mono">NIP. {teacherProfile.nip_nuptk || '-'}</p>
+            <p className="text-[10px] font-mono">{(teacherProfile.nip_nuptk_type || 'NIP')}. {teacherProfile.nip_nuptk || '-'}</p>
           </div>
         </div>
       </div>
