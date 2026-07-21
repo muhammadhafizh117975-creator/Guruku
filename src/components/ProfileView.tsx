@@ -147,7 +147,7 @@ export default function ProfileView() {
             <div className="w-full mt-6 pt-6 border-t border-gray-100 dark:border-neutral-800/80 space-y-3 text-left">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">Status Jabatan</span>
-                <span className="font-bold text-gray-700 dark:text-gray-300">Guru Utama / Pembina</span>
+                <span className="font-bold text-gray-700 dark:text-gray-300">Guru Mata Pelajaran</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">Koneksi DB</span>
