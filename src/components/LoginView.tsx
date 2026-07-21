@@ -8,6 +8,8 @@ import { getFromStorage, saveToStorage } from '../store';
 import { Profile } from '../types';
 import { BookOpen, Key, Mail, Lock, CheckCircle, RefreshCw, AlertCircle, User, UserPlus } from 'lucide-react';
 import { motion } from 'motion/react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../googleService';
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
@@ -23,6 +25,7 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Register Form Fields
   const [regName, setRegName] = useState('');
@@ -126,7 +129,7 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -147,17 +150,52 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
 
     let isAuthorized = false;
     let loggedInName = '';
+    setIsLoading(true);
 
     if (cleanEmail === defaultEmail && password === defaultPassword) {
       isAuthorized = true;
       loggedInName = 'Muhammad Hafizh, S.Pd.';
-    } else if (matchingAccount && matchingAccount.password === password) {
-      isAuthorized = true;
-      loggedInName = matchingAccount.name;
+      setIsLoading(false);
+    } else {
+      try {
+        // Attempt cloud login with Firebase Auth
+        const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+        isAuthorized = true;
+        loggedInName = userCredential.user.displayName || 'Guru Mapel';
+      } catch (fbError: any) {
+        console.warn('Firebase sign-in error, trying local fallback:', fbError);
+        
+        // If login fails in Firebase, check local fallback accounts
+        if (matchingAccount && matchingAccount.password === password) {
+          isAuthorized = true;
+          loggedInName = matchingAccount.name;
+        } else {
+          // Map Firebase error codes to user friendly messages
+          if (fbError.code === 'auth/wrong-password' || fbError.code === 'auth/invalid-credential' || fbError.code === 'auth/user-not-found') {
+            setError('Email atau password salah. Silakan periksa kembali kredensial Anda.');
+          } else if (fbError.code === 'auth/invalid-email') {
+            setError('Format alamat email tidak valid.');
+          } else if (fbError.code === 'auth/network-request-failed') {
+            setError('Koneksi internet bermasalah. Gagal menghubungi server cloud.');
+          } else if (fbError.code === 'auth/operation-not-allowed') {
+            setError('Metode masuk Email/Password belum diaktifkan di Firebase Console Anda.');
+          } else {
+            setError(`Gagal login: ${fbError.message || fbError}`);
+          }
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     if (isAuthorized) {
       setSuccess('Login berhasil! Mengalihkan ke Dashboard...');
+
+      // Check if this is a login on a new device (no previous local data backup for this account)
+      const hasLocalBackup = localStorage.getItem(`guruku_profile_backup_${cleanEmail}`);
+      if (!hasLocalBackup && cleanEmail !== defaultEmail) {
+        localStorage.setItem('guruku_new_device_login', 'true');
+      }
 
       // Swap database to this specific user context
       swapDatabase(cleanEmail, false, loggedInName);
@@ -179,12 +217,10 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
       setTimeout(() => {
         onLoginSuccess();
       }, 1000);
-    } else {
-      setError('Email atau password salah. Silakan periksa kembali kredensial Anda.');
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -223,23 +259,58 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
       return;
     }
 
-    // Register account
-    const newAccount = { email: cleanEmail, password: regPassword, name };
-    registeredAccounts.push(newAccount);
-    saveToStorage('guruku_accounts', registeredAccounts);
+    setIsLoading(true);
 
-    // Swap / provision clean database for this user automatically
-    swapDatabase(cleanEmail, true, name);
+    try {
+      // Register on Firebase Auth cloud
+      const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, regPassword);
+      // Update Firebase Auth display name
+      await updateProfile(userCredential.user, { displayName: name });
 
-    setSuccess('Pendaftaran berhasil! Database Anda telah disiapkan secara otomatis. Mengalihkan ke halaman login...');
-    
-    // Switch back to login view after successful registration
-    setTimeout(() => {
-      setEmail(cleanEmail);
-      setPassword(regPassword);
-      setViewMode('login');
-      setSuccess('');
-    }, 2000);
+      // Save local backup reference for offline fallback
+      const newAccount = { email: cleanEmail, password: regPassword, name };
+      registeredAccounts.push(newAccount);
+      saveToStorage('guruku_accounts', registeredAccounts);
+
+      // Swap / provision clean database for this user automatically
+      swapDatabase(cleanEmail, true, name);
+
+      setSuccess('Pendaftaran berhasil di server cloud! Database Anda telah disiapkan secara otomatis. Mengalihkan ke halaman login...');
+
+      // Switch back to login view after successful registration
+      setTimeout(() => {
+        setEmail(cleanEmail);
+        setPassword(regPassword);
+        setViewMode('login');
+        setSuccess('');
+      }, 2000);
+    } catch (fbError: any) {
+      console.error('Firebase registration error:', fbError);
+
+      if (fbError.code === 'auth/email-already-in-use') {
+        setError('Email ini sudah terdaftar di server cloud. Silakan langsung masuk (Login) atau gunakan nama lain.');
+      } else if (fbError.code === 'auth/operation-not-allowed') {
+        // Fallback to local accounts only if Firebase Auth email/password provider is disabled
+        const newAccount = { email: cleanEmail, password: regPassword, name };
+        registeredAccounts.push(newAccount);
+        saveToStorage('guruku_accounts', registeredAccounts);
+
+        swapDatabase(cleanEmail, true, name);
+
+        setSuccess('Pendaftaran lokal berhasil! (Catatan: Cloud Firebase belum diaktifkan, data disimpan offline di browser ini). Mengalihkan...');
+
+        setTimeout(() => {
+          setEmail(cleanEmail);
+          setPassword(regPassword);
+          setViewMode('login');
+          setSuccess('');
+        }, 2000);
+      } else {
+        setError(`Pendaftaran gagal: ${fbError.message || fbError}`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResetPassword = (e: React.FormEvent) => {
@@ -394,9 +465,17 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-[#696cff] hover:bg-indigo-600 transition-all text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-600/20 cursor-pointer"
+                disabled={isLoading}
+                className="w-full py-2.5 bg-[#696cff] hover:bg-indigo-600 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-all text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-600/20 cursor-pointer flex items-center justify-center gap-2"
               >
-                Masuk ke Akun Guru
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Menghubungkan...</span>
+                  </>
+                ) : (
+                  <span>Masuk ke Akun Guru</span>
+                )}
               </button>
 
               <div className="text-center pt-3 border-t border-gray-50 dark:border-neutral-800/60 mt-4">
@@ -494,10 +573,20 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-[#696cff] hover:bg-indigo-600 transition-all text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-600/20 cursor-pointer flex items-center justify-center gap-1.5"
+                disabled={isLoading}
+                className="w-full py-2.5 bg-[#696cff] hover:bg-indigo-600 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-all text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-600/20 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <UserPlus className="w-4 h-4" />
-                <span>Daftar Akun Baru</span>
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Mendaftarkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Daftar Akun Baru</span>
+                  </>
+                )}
               </button>
 
               <div className="text-center pt-3 border-t border-gray-50 dark:border-neutral-800/60 mt-4">

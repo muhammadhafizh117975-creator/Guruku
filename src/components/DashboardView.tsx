@@ -115,6 +115,9 @@ export default function DashboardView({ onChangeMenu }: DashboardViewProps) {
     });
   });
 
+  // Check if user is logging in on a new device (without local database backups)
+  const isNewDevice = localStorage.getItem('guruku_new_device_login') === 'true';
+
   return (
     <div className="space-y-6">
       
@@ -138,6 +141,38 @@ export default function DashboardView({ onChangeMenu }: DashboardViewProps) {
           </button>
         </div>
       </div>
+
+      {isNewDevice && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-4 rounded-2xl flex gap-3.5 shadow-xs items-start animate-fade-in">
+          <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+              <span>👋 Masuk di Perangkat Baru Terdeteksi</span>
+            </h4>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 leading-relaxed">
+              Karena database GuruKu diamankan secara lokal di browser, data pengajaran Anda saat ini masih kosong di browser ini. 
+              Jangan khawatir! Anda dapat langsung memulihkan seluruh data (matpel, kelas, siswa, nilai, jurnal) Anda secara instan dari <strong>Google Spreadsheet</strong> atau cadangan <strong>Google Drive</strong> Anda.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => onChangeMenu('spreadsheet')}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[10px] rounded-lg transition shadow-xs cursor-pointer"
+              >
+                Buka Panduan & Mulai Sinkronisasi
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('guruku_new_device_login');
+                  window.location.reload();
+                }}
+                className="px-3 py-1.5 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/40 font-semibold text-[10px] rounded-lg transition cursor-pointer"
+              >
+                Tutup Pesan Ini
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Grid Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
