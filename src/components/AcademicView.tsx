@@ -832,7 +832,7 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
                       return (
                         <tr key={grade.student_id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
                           <td className="py-3 px-6 font-mono text-xs font-semibold">{student?.nis}</td>
-                          <td className="py-3 px-6 font-bold">{student?.name}</td>
+                          <td className="py-3 px-6 font-medium text-gray-800 dark:text-gray-200">{student?.name}</td>
                           
                           {/* Tugas */}
                           <td className="py-2 px-4 text-center">
@@ -1002,7 +1002,7 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
                       return (
                         <tr key={att.student_id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
                           <td className="py-4 px-6 font-mono text-xs font-semibold text-gray-500">{student?.nis}</td>
-                          <td className="py-4 px-6 font-bold">{student?.name}</td>
+                          <td className="py-4 px-6 font-medium text-gray-800 dark:text-gray-200">{student?.name}</td>
                           <td className="py-4 px-6">
                             <span className="text-xs text-gray-500">{student?.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
                           </td>

@@ -744,7 +744,7 @@ export default function DataMasterView({ currentMenu }: DataMasterViewProps) {
                     return (
                       <tr key={std.id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300 transition-colors">
                         <td className="py-3 px-6 font-mono text-xs font-semibold text-[#696cff]">{std.nis}</td>
-                        <td className="py-3 px-6 font-bold">{std.name}</td>
+                        <td className="py-3 px-6 font-medium text-gray-800 dark:text-gray-200">{std.name}</td>
                         <td className="py-3 px-6">
                           <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${
                             std.gender === 'L' 

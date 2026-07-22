@@ -331,7 +331,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
         <div className="space-y-16">
           <div>
             <p>Mengetahui,</p>
-            <p className="font-bold">Kepala {appSettings.schoolName}</p>
+            <p>Kepala {appSettings.schoolName}</p>
           </div>
           <div>
             <p className="font-bold underline">{headmasterName}</p>
@@ -342,7 +342,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
         <div className="space-y-16">
           <div>
             <p>{cityAndDate}</p>
-            <p className="font-bold">Guru Mata Pelajaran,</p>
+            <p>Guru Mata Pelajaran,</p>
           </div>
           <div>
             <p className="font-bold underline">{teacherProfile.name}</p>
@@ -616,7 +616,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
                     filteredGrades.map((fg) => (
                       <tr key={fg.student.id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
                         <td className="py-3.5 px-6 font-mono text-xs">{fg.student.nis}</td>
-                        <td className="py-3.5 px-6 font-bold">{fg.student.name}</td>
+                        <td className="py-3.5 px-6 font-medium text-gray-800 dark:text-gray-200">{fg.student.name}</td>
                         <td className="py-3.5 px-4 text-center font-mono">{fg.grade.assignment}</td>
                         <td className="py-3.5 px-4 text-center font-mono">{fg.grade.daily}</td>
                         <td className="py-3.5 px-4 text-center font-mono">{fg.grade.asts ?? 0}</td>
@@ -681,7 +681,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
                     attendanceReportList.map((ar) => (
                       <tr key={ar.student.id} className="hover:bg-gray-50/50 dark:hover:bg-[#232333]/50 text-gray-700 dark:text-gray-300">
                         <td className="py-3.5 px-6 font-mono text-xs">{ar.student.nis}</td>
-                        <td className="py-3.5 px-6 font-bold">{ar.student.name}</td>
+                        <td className="py-3.5 px-6 font-medium text-gray-800 dark:text-gray-200">{ar.student.name}</td>
                         <td className="py-3.5 px-4 text-center font-mono font-semibold text-emerald-600">{ar.hadir}</td>
                         <td className="py-3.5 px-4 text-center font-mono font-semibold text-blue-500">{ar.izin}</td>
                         <td className="py-3.5 px-4 text-center font-mono font-semibold text-amber-500">{ar.sakit}</td>
