@@ -819,40 +819,24 @@ export default function AppSettingsView() {
           <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-4 transition-colors">
             <div className="flex items-center gap-2 border-b border-gray-50 dark:border-neutral-800 pb-3">
               <Sliders className="w-4.5 h-4.5 text-[#696cff]" />
-              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Pengaturan Cetak & Margin Laporan</h4>
+              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Pengaturan Cetak & Margin Laporan (A4)</h4>
             </div>
 
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              Atur ukuran kertas default, kota titimangsa tanda tangan, dan margin halaman cetak PDF/Laporan (dalam centimeter).
+              Atur kota titimangsa lokasi penandatanganan serta margin halaman cetak Laporan (dalam centimeter).
             </p>
 
-            <div className="grid grid-cols-2 gap-3 pb-2 border-b border-gray-100 dark:border-neutral-800/60">
-              <div>
-                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
-                  Ukuran Kertas Default
-                </label>
-                <select
-                  value={settings.defaultPaperSize || 'A4'}
-                  onChange={(e) => handleSaveSettings({ ...settings, defaultPaperSize: e.target.value as 'A4' | 'F4' })}
-                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
-                >
-                  <option value="A4">A4 (210 x 297 mm)</option>
-                  <option value="F4">F4 / Foolscap (215 x 330 mm)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
-                  Kota Titimangsa (Lokasi Cetak)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Bandung, Jakarta, dll."
-                  value={settings.schoolCity || ''}
-                  onChange={(e) => handleSaveSettings({ ...settings, schoolCity: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
-                />
-              </div>
+            <div className="pb-2 border-b border-gray-100 dark:border-neutral-800/60">
+              <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                Kota Titimangsa (Lokasi Penandatanganan Laporan)
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: Bandung, Jakarta, dll."
+                value={settings.schoolCity || ''}
+                onChange={(e) => handleSaveSettings({ ...settings, schoolCity: e.target.value })}
+                className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

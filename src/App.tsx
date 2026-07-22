@@ -116,11 +116,21 @@ export default function App() {
       <style>{`
         @media print {
           @page {
-            size: A4;
+            size: A4 portrait;
             margin-top: ${printMargins.top}cm !important;
             margin-bottom: ${printMargins.bottom}cm !important;
             margin-left: ${printMargins.left}cm !important;
             margin-right: ${printMargins.right}cm !important;
+          }
+          html, body, #root, main, div, table, tbody, tr, td {
+            overflow: visible !important;
+            max-height: none !important;
+          }
+          body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>

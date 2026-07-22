@@ -82,11 +82,6 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
   const [filterStartDate, setFilterStartDate] = useState('2026-07-01');
   const [filterEndDate, setFilterEndDate] = useState('2026-07-31');
 
-  // Paper Size & Print Date States
-  const [paperSize, setPaperSize] = useState<'A4' | 'F4'>(() => {
-    return (appSettings.defaultPaperSize as 'A4' | 'F4') || 'A4';
-  });
-
   const getDefaultCity = () => {
     if (appSettings.schoolCity) return appSettings.schoolCity;
     if (appSettings.schoolAddress) {
@@ -364,7 +359,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
             <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Filter & Pengaturan Cetak Laporan</h4>
           </div>
           <span className="text-[10px] font-semibold text-[#696cff] bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
-            Kertas: {paperSize === 'F4' ? 'F4 / Foolscap (215x330mm)' : 'A4 (210x297mm)'}
+            Ukuran Kertas: A4
           </span>
         </div>
 
@@ -425,19 +420,6 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
             </select>
           </div>
 
-          {/* Ukuran Kertas Cetak */}
-          <div className="space-y-1">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Ukuran Kertas</label>
-            <select
-              value={paperSize}
-              onChange={(e) => setPaperSize(e.target.value as 'A4' | 'F4')}
-              className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#696cff] font-semibold"
-            >
-              <option value="A4">A4 (210 x 297 mm)</option>
-              <option value="F4">F4 / Foolscap (215 x 330 mm)</option>
-            </select>
-          </div>
-
           {/* Titimangsa (Kota) */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Kota Titimangsa</label>
@@ -495,7 +477,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
             className="px-4 py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] transition text-gray-600 dark:text-gray-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-4 h-4 text-[#696cff]" />
-            <span>Cetak PDF ({paperSize})</span>
+            <span>Cetak PDF</span>
           </button>
           <button
             onClick={handleExportCSV}
@@ -512,8 +494,30 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page {
-              size: ${paperSize === 'F4' ? '215mm 330mm' : 'A4'};
+              size: A4 portrait;
               margin: ${(appSettings.printMarginTop !== undefined ? appSettings.printMarginTop : 1.0)}cm ${(appSettings.printMarginRight !== undefined ? appSettings.printMarginRight : 1.0)}cm ${(appSettings.printMarginBottom !== undefined ? appSettings.printMarginBottom : 1.0)}cm ${(appSettings.printMarginLeft !== undefined ? appSettings.printMarginLeft : 1.0)}cm !important;
+            }
+            html, body, #root, main, div, table, tbody, tr, td {
+              overflow: visible !important;
+              max-height: none !important;
+            }
+            table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+            }
+            thead {
+              display: table-header-group !important;
+            }
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            td, th {
+              word-break: break-word !important;
+            }
+            .signature-block {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
           }
         `}} />
@@ -596,9 +600,9 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
           </div>
 
-          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent print:overflow-visible">
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="w-full text-left border-collapse print:text-black">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-[#252538] text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-neutral-800">
                     <th className="py-3 px-6 w-28">NIS</th>
@@ -655,15 +659,15 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
       {/* REPORT 2: LAPORAN ABSENSI */}
       {currentMenu === 'report_attendance' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent print:overflow-visible">
             <div className="p-4 border-b border-gray-50 dark:border-neutral-800 flex justify-between items-center bg-gray-50/20 print:hidden">
               <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                 Rekap Kehadiran: {filterStartDate} s/d {filterEndDate}
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="w-full text-left border-collapse print:text-black">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-[#252538] text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-neutral-800">
                     <th className="py-3 px-6 w-28">NIS</th>
@@ -720,13 +724,13 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
       {/* REPORT 3: LAPORAN JURNAL MENGAJAR */}
       {currentMenu === 'report_journals' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl border border-gray-100 dark:border-neutral-800 overflow-hidden shadow-xs transition-colors duration-300 print:border-none print:shadow-none print:bg-transparent print:overflow-visible">
             <div className="p-4 border-b border-gray-50 dark:border-neutral-800 bg-gray-50/20 text-xs font-bold text-gray-700 dark:text-gray-300 print:hidden">
               Daftar Jurnal Mengajar Terdaftar: {filterStartDate} s/d {filterEndDate}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="w-full text-left border-collapse print:text-black">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-[#252538] text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-neutral-800">
                     <th className="py-3 px-6 w-28">Tanggal</th>
