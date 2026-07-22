@@ -682,15 +682,13 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
         {/* Action Buttons */}
         {currentMenu !== 'journals' && currentMenu !== 'modul_ajar' && (
           <div className="flex gap-2">
-            {currentMenu !== 'grades' && (
-              <button
-                onClick={handlePrint}
-                className="px-3.5 py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] transition text-gray-600 dark:text-gray-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Cetak PDF</span>
-              </button>
-            )}
+            <button
+              onClick={handlePrint}
+              className="px-3.5 py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] transition text-gray-600 dark:text-gray-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Cetak PDF</span>
+            </button>
             <button
               onClick={handleExportCSV}
               className="px-3.5 py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] transition text-gray-600 dark:text-gray-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
