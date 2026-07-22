@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Subject, Class, Student, Grade, Attendance, TeachingJournal } from '../types';
-import { getFromStorage } from '../store';
+import { getFromStorage, saveToStorage } from '../store';
 import { 
   FileSpreadsheet, 
   Printer, 
@@ -81,6 +81,32 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
   const [filterClass, setFilterClass] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('2026-07-01');
   const [filterEndDate, setFilterEndDate] = useState('2026-07-31');
+
+  // Paper Size & Orientation States (Support F4 and Foolscap)
+  const [paperSize, setPaperSize] = useState<'F4' | 'Foolscap' | 'A4' | 'Letter' | 'Legal'>(() => {
+    return appSettings.paperSize || 'F4';
+  });
+  const [paperOrientation, setPaperOrientation] = useState<'portrait' | 'landscape'>('portrait');
+
+  // Compute CSS @page size property
+  const getPageSizeStyle = () => {
+    if (paperSize === 'F4') {
+      return paperOrientation === 'portrait' ? '215mm 330mm' : '330mm 215mm';
+    }
+    if (paperSize === 'Foolscap') {
+      return paperOrientation === 'portrait' ? '215mm 330mm' : '330mm 215mm';
+    }
+    if (paperSize === 'A4') {
+      return `A4 ${paperOrientation}`;
+    }
+    if (paperSize === 'Letter') {
+      return `letter ${paperOrientation}`;
+    }
+    if (paperSize === 'Legal') {
+      return `legal ${paperOrientation}`;
+    }
+    return paperOrientation === 'portrait' ? '215mm 330mm' : '330mm 215mm';
+  };
 
   // Set default filters
   useEffect(() => {
@@ -402,6 +428,39 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
             </>
           )}
 
+          {/* Ukuran Kertas Cetak */}
+          <div className="space-y-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Ukuran Kertas</label>
+            <select
+              value={paperSize}
+              onChange={(e) => {
+                const newSize = e.target.value as any;
+                setPaperSize(newSize);
+                saveToStorage('guruku_app_settings', { ...appSettings, paperSize: newSize });
+              }}
+              className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#696cff] font-semibold"
+            >
+              <option value="F4">F4 / Folio (215 x 330 mm)</option>
+              <option value="Foolscap">Foolscap (215 x 330 mm)</option>
+              <option value="A4">A4 (210 x 297 mm)</option>
+              <option value="Letter">Letter (216 x 279 mm)</option>
+              <option value="Legal">Legal (216 x 356 mm)</option>
+            </select>
+          </div>
+
+          {/* Orientasi Halaman */}
+          <div className="space-y-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Orientasi Kertas</label>
+            <select
+              value={paperOrientation}
+              onChange={(e) => setPaperOrientation(e.target.value as 'portrait' | 'landscape')}
+              className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#696cff] font-medium"
+            >
+              <option value="portrait">Potret (Tegak)</option>
+              <option value="landscape">Lanskap (Mendatar)</option>
+            </select>
+          </div>
+
         </div>
 
         {/* Buttons */}
@@ -411,7 +470,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
             className="px-4 py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] transition text-gray-600 dark:text-gray-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-4 h-4" />
-            <span>Cetak PDF</span>
+            <span>Cetak PDF ({paperSize})</span>
           </button>
           <button
             onClick={handleExportCSV}
@@ -428,6 +487,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page {
+              size: ${getPageSizeStyle()} !important;
               margin: ${(appSettings.printMarginTop !== undefined ? appSettings.printMarginTop : 1.0)}cm ${(appSettings.printMarginRight !== undefined ? appSettings.printMarginRight : 1.0)}cm ${(appSettings.printMarginBottom !== undefined ? appSettings.printMarginBottom : 1.0)}cm ${(appSettings.printMarginLeft !== undefined ? appSettings.printMarginLeft : 1.0)}cm !important;
             }
           }
