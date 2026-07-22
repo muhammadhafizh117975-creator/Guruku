@@ -67,6 +67,8 @@ interface AppSettings {
   headmasterName?: string;
   headmasterNip?: string;
   headmasterNipType?: 'NIP' | 'NUKS';
+  schoolCity?: string;
+  defaultPaperSize?: 'A4' | 'F4';
   printMarginTop?: number;
   printMarginBottom?: number;
   printMarginLeft?: number;
@@ -81,6 +83,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   headmasterName: 'Drs. H. Mulyadi, M.Pd.',
   headmasterNip: '19710312 199702 1 002',
   headmasterNipType: 'NUKS',
+  schoolCity: 'Bandung',
+  defaultPaperSize: 'A4',
   printMarginTop: 1.0,
   printMarginBottom: 1.0,
   printMarginLeft: 1.0,
@@ -811,16 +815,45 @@ export default function AppSettingsView() {
             </div>
           </div>
 
-          {/* Card 1.5: Margin Cetak Laporan (A4) */}
+          {/* Card 1.5: Pengaturan Cetak & Margin Laporan */}
           <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-4 transition-colors">
             <div className="flex items-center gap-2 border-b border-gray-50 dark:border-neutral-800 pb-3">
               <Sliders className="w-4.5 h-4.5 text-[#696cff]" />
-              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Margin Cetak Laporan (A4)</h4>
+              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Pengaturan Cetak & Margin Laporan</h4>
             </div>
 
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              Atur batas margin halaman cetak PDF/Laporan dalam satuan centimeter (cm). Pengaturan ini akan langsung diterapkan saat mencetak.
+              Atur ukuran kertas default, kota titimangsa tanda tangan, dan margin halaman cetak PDF/Laporan (dalam centimeter).
             </p>
+
+            <div className="grid grid-cols-2 gap-3 pb-2 border-b border-gray-100 dark:border-neutral-800/60">
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Ukuran Kertas Default
+                </label>
+                <select
+                  value={settings.defaultPaperSize || 'A4'}
+                  onChange={(e) => handleSaveSettings({ ...settings, defaultPaperSize: e.target.value as 'A4' | 'F4' })}
+                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+                >
+                  <option value="A4">A4 (210 x 297 mm)</option>
+                  <option value="F4">F4 / Foolscap (215 x 330 mm)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Kota Titimangsa (Lokasi Cetak)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Bandung, Jakarta, dll."
+                  value={settings.schoolCity || ''}
+                  onChange={(e) => handleSaveSettings({ ...settings, schoolCity: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#696cff] text-gray-800 dark:text-gray-200"
+                />
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>

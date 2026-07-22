@@ -82,6 +82,49 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
   const [filterStartDate, setFilterStartDate] = useState('2026-07-01');
   const [filterEndDate, setFilterEndDate] = useState('2026-07-31');
 
+  // Paper Size & Print Date States
+  const [paperSize, setPaperSize] = useState<'A4' | 'F4'>(() => {
+    return (appSettings.defaultPaperSize as 'A4' | 'F4') || 'A4';
+  });
+
+  const getDefaultCity = () => {
+    if (appSettings.schoolCity) return appSettings.schoolCity;
+    if (appSettings.schoolAddress) {
+      const parts = appSettings.schoolAddress.split(',');
+      if (parts.length > 1) {
+        const candidate = parts[parts.length - 1].trim();
+        if (candidate) return candidate;
+      }
+    }
+    return 'Bandung';
+  };
+
+  const [printPlace, setPrintPlace] = useState<string>(getDefaultCity);
+
+  const getTodayISO = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const [printDate, setPrintDate] = useState<string>(getTodayISO);
+
+  const formatIndonesianDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const year = parts[0];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return `${day} ${monthNames[monthIndex] || ''} ${year}`;
+  };
+
   // Set default filters
   useEffect(() => {
     if (subjects.length > 0 && !filterSubject) setFilterSubject(subjects[0].id);
@@ -280,8 +323,8 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
   const headmasterNip = appSettings.headmasterNip || '19710312 199702 1 002';
 
   const renderSignatureBlock = () => {
-    const today = new Date();
-    const formattedDate = `${today.getDate()} ${['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][today.getMonth()]} ${today.getFullYear()}`;
+    const formattedDate = formatIndonesianDate(printDate);
+    const cityAndDate = `${printPlace || 'Bandung'}, ${formattedDate}`;
 
     return (
       <div className="mt-12 text-xs text-black hidden print:grid grid-cols-2 text-center break-inside-avoid">
@@ -298,7 +341,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
 
         <div className="space-y-16">
           <div>
-            <p>Bandung, {formattedDate}</p>
+            <p>{cityAndDate}</p>
             <p className="font-bold">Guru Mata Pelajaran,</p>
           </div>
           <div>
@@ -315,9 +358,14 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
       
       {/* 1. Filter Panel (Print Hidden) */}
       <div className="bg-white dark:bg-[#2b2c40] p-5 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-4 transition-colors duration-300 print:hidden">
-        <div className="flex items-center gap-2 border-b border-gray-50 dark:border-neutral-800 pb-3 mb-1">
-          <Filter className="w-4.5 h-4.5 text-[#696cff]" />
-          <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Filter Laporan Akademik</h4>
+        <div className="flex items-center justify-between border-b border-gray-50 dark:border-neutral-800 pb-3 mb-1">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4.5 h-4.5 text-[#696cff]" />
+            <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Filter & Pengaturan Cetak Laporan</h4>
+          </div>
+          <span className="text-[10px] font-semibold text-[#696cff] bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
+            Kertas: {paperSize === 'F4' ? 'F4 / Foolscap (215x330mm)' : 'A4 (210x297mm)'}
+          </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -377,11 +425,47 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
             </select>
           </div>
 
+          {/* Ukuran Kertas Cetak */}
+          <div className="space-y-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Ukuran Kertas</label>
+            <select
+              value={paperSize}
+              onChange={(e) => setPaperSize(e.target.value as 'A4' | 'F4')}
+              className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#696cff] font-semibold"
+            >
+              <option value="A4">A4 (210 x 297 mm)</option>
+              <option value="F4">F4 / Foolscap (215 x 330 mm)</option>
+            </select>
+          </div>
+
+          {/* Titimangsa (Kota) */}
+          <div className="space-y-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Kota Titimangsa</label>
+            <input
+              type="text"
+              value={printPlace}
+              onChange={(e) => setPrintPlace(e.target.value)}
+              placeholder="Contoh: Bandung"
+              className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-1.5 px-3 text-xs focus:outline-none focus:border-[#696cff]"
+            />
+          </div>
+
+          {/* Tanggal Cetak Laporan */}
+          <div className="space-y-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Tanggal Cetak</label>
+            <input
+              type="date"
+              value={printDate}
+              onChange={(e) => setPrintDate(e.target.value)}
+              className="w-full bg-gray-50 dark:bg-[#232333] border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 rounded-xl py-1.5 px-3 text-xs focus:outline-none focus:border-[#696cff]"
+            />
+          </div>
+
           {/* Date range inputs (shown for absensi / jurnal) */}
           {currentMenu !== 'report_grades' && (
             <>
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Tanggal Mulai</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Periode Mulai</label>
                 <input
                   type="date"
                   value={filterStartDate}
@@ -391,7 +475,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Tanggal Selesai</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Periode Selesai</label>
                 <input
                   type="date"
                   value={filterEndDate}
@@ -410,8 +494,8 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
             onClick={handlePrint}
             className="px-4 py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] transition text-gray-600 dark:text-gray-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
           >
-            <Printer className="w-4 h-4" />
-            <span>Cetak PDF</span>
+            <Printer className="w-4 h-4 text-[#696cff]" />
+            <span>Cetak PDF ({paperSize})</span>
           </button>
           <button
             onClick={handleExportCSV}
@@ -428,6 +512,7 @@ export default function ReportsView({ currentMenu }: ReportsViewProps) {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page {
+              size: ${paperSize === 'F4' ? '215mm 330mm' : 'A4'};
               margin: ${(appSettings.printMarginTop !== undefined ? appSettings.printMarginTop : 1.0)}cm ${(appSettings.printMarginRight !== undefined ? appSettings.printMarginRight : 1.0)}cm ${(appSettings.printMarginBottom !== undefined ? appSettings.printMarginBottom : 1.0)}cm ${(appSettings.printMarginLeft !== undefined ? appSettings.printMarginLeft : 1.0)}cm !important;
             }
           }
