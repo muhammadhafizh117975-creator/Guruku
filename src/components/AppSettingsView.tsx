@@ -34,7 +34,8 @@ import {
   Plus,
   Copy,
   Check,
-  Sliders
+  Sliders,
+  RotateCcw
 } from 'lucide-react';
 import { 
   getFromStorage, 
@@ -42,7 +43,8 @@ import {
   exportDatabaseAsSpreadsheetJSON, 
   importDatabaseFromSpreadsheetJSON,
   initStorage,
-  restoreFromAutoBackup
+  restoreFromAutoBackup,
+  triggerAutoBackup
 } from '../store';
 import { 
   googleSignIn, 
@@ -108,6 +110,7 @@ export default function AppSettingsView() {
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
   const [isSheetsLoading, setIsSheetsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Sheet config state
   const [sheetConfig, setSheetConfig] = useState(() => {
@@ -418,25 +421,74 @@ export default function AppSettingsView() {
     }
   };
 
-  // Local JSON Export
+  // Database Synchronization Handler
+  const handleSyncDatabase = async () => {
+    setIsSyncing(true);
+    try {
+      setNotification({
+        type: 'success',
+        message: 'Menyinkronkan database...'
+      });
+
+      // 1. If Google Sheets is connected, push all local database tables
+      if (sheetConfig.connected && sheetConfig.spreadsheetId) {
+        await pushDataToSpreadsheet(sheetConfig.spreadsheetId);
+      }
+
+      // 2. Update lastSynced configuration
+      const updatedConfig = {
+        ...sheetConfig,
+        lastSynced: new Date().toISOString().replace('T', ' ').substring(0, 16)
+      };
+      saveToStorage('guruku_spreadsheet_config', updatedConfig);
+      setSheetConfig(updatedConfig);
+
+      // 3. Trigger immediate snapshot auto backup of synchronized data
+      triggerAutoBackup();
+      
+      // 4. Reload auto backups list state
+      try {
+        const saved = localStorage.getItem('guruku_auto_backups');
+        setLocalAutoBackups(saved ? JSON.parse(saved) : []);
+      } catch (e) {
+        console.error(e);
+      }
+
+      setNotification({
+        type: 'success',
+        message: 'Database berhasil disinkronkan! Seluruh data lokal dan cadangan telah diperbarui.'
+      });
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        message: `Gagal menyinkronkan database: ${err.message || err}`
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Local JSON Export (Synced Backup)
   const handleExportJSON = () => {
     try {
+      // Force trigger auto backup snapshot to keep in sync
+      triggerAutoBackup();
       const jsonStr = exportDatabaseAsSpreadsheetJSON();
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", `guruku_db_local_backup_${new Date().toISOString().substring(0, 10)}.json`);
+      link.setAttribute("download", `guruku_db_synced_backup_${new Date().toISOString().substring(0, 10)}.json`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       setNotification({
         type: 'success',
-        message: 'Database lokal berhasil diunduh ke format JSON!'
+        message: 'Database lokal yang tersinkronkan berhasil diunduh ke format JSON!'
       });
     } catch (e: any) {
       setNotification({
         type: 'error',
-        message: `Gagal mengekspor database lokal: ${e.message}`
+        message: `Gagal mengekspor database tersinkronisasi: ${e.message}`
       });
     }
   };
@@ -900,34 +952,52 @@ export default function AppSettingsView() {
 
           {/* Card 2: Manajemen File Lokal & Reset Database */}
           <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-4 transition-colors">
-            <div className="flex items-center gap-2 border-b border-gray-50 dark:border-neutral-800 pb-3">
-              <Database className="w-4.5 h-4.5 text-[#696cff]" />
-              <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">File Lokal & Reset DB</h4>
+            <div className="flex items-center justify-between border-b border-gray-50 dark:border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Database className="w-4.5 h-4.5 text-[#696cff]" />
+                <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">File Lokal & Reset DB</h4>
+              </div>
+              <span className="px-2 py-0.5 text-[9px] font-bold rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
+                Tersinkronkan
+              </span>
             </div>
 
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              Manajemen cadangan offline lokal di browser perangkat Anda saat ini.
+              Manajemen cadangan offline serta tombol khusus sinkronisasi database perangkat Anda.
             </p>
 
             <div className="space-y-2.5">
+              {/* Tombol Khusus Sinkronisasi ke Database */}
               <button
-                onClick={handleExportJSON}
-                className="w-full py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
+                onClick={handleSyncDatabase}
+                disabled={isSyncing}
+                className="w-full py-2.5 bg-[#696cff] hover:bg-[#5f61e6] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-xs transition cursor-pointer disabled:opacity-50"
               >
-                <Download className="w-4 h-4 text-emerald-500" />
-                <span>Unduh JSON Lokal</span>
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Menyinkronkan Database...' : 'Sinkronisasi ke Database'}</span>
               </button>
 
-              <label className="w-full py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer select-none">
-                <Upload className="w-4 h-4 text-[#696cff]" />
-                <span>Unggah JSON Lokal</span>
-                <input
-                  type="file"
-                  accept=".json"
-                  className="hidden"
-                  onChange={handleImportJSON}
-                />
-              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleExportJSON}
+                  className="py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  title="Unduh backup database yang telah disinkronkan"
+                >
+                  <Download className="w-4 h-4 text-emerald-500" />
+                  <span>Unduh JSON</span>
+                </button>
+
+                <label className="py-2 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-[#232333] text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer select-none">
+                  <Upload className="w-4 h-4 text-[#696cff]" />
+                  <span>Unggah JSON</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={handleImportJSON}
+                  />
+                </label>
+              </div>
 
               <button
                 onClick={handleClearClassStudentAdminData}
@@ -942,7 +1012,7 @@ export default function AppSettingsView() {
                 onClick={handleResetDatabase}
                 className="w-full py-2 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-500 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4" />
                 <span>Setel Ulang DB</span>
               </button>
             </div>

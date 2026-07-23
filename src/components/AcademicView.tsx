@@ -147,7 +147,7 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
     }, 2500);
   };
 
-  // Load custom grade weights on mount or whenever settings toggled
+  // Load custom grade weights on mount & listen for real-time storage changes
   useEffect(() => {
     const weights = getFromStorage('guruku_grade_weights', {
       assignment: 20,
@@ -159,6 +159,19 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
     setWeightHarian(weights.daily ?? 30);
     setWeightAsts(weights.asts ?? 25);
     setWeightAsas(weights.asas ?? 25);
+
+    const handleStorageChange = (e: any) => {
+      if (!e.detail || e.detail.key === 'guruku_modul_ajar') {
+        setModulAjarList(getFromStorage<ModulAjar[]>('guruku_modul_ajar', []));
+      }
+    };
+
+    window.addEventListener('guruku_storage_change', handleStorageChange as EventListener);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('guruku_storage_change', handleStorageChange as EventListener);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const uploadFile = async (file: File) => {
@@ -1490,8 +1503,14 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
 
           {/* Right Column: List */}
           <div className="bg-white dark:bg-[#2b2c40] p-6 rounded-2xl border border-gray-100 dark:border-neutral-800 shadow-xs xl:col-span-2 overflow-hidden transition-colors duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm">Riwayat Modul Ajar (RPP)</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm">Riwayat Modul Ajar (RPP)</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Realtime DB
+                </span>
+              </div>
               <span className="text-xs font-mono text-gray-400">{modulAjarList.length} modul terdaftar</span>
             </div>
 

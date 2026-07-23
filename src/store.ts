@@ -241,17 +241,32 @@ export const saveToStorage = <T>(key: string, data: T): void => {
   config.lastSynced = new Date().toISOString().replace('T', ' ').substring(0, 16);
   localStorage.setItem('guruku_spreadsheet_config', JSON.stringify(config));
 
+  // Dispatch custom window event for real-time reactive UI listeners
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('guruku_storage_change', { detail: { key, data } }));
+  }
+
   // Trigger automated backup
   try {
     triggerAutoBackup();
   } catch (err) {
     console.error('Failed to trigger auto-backup inside saveToStorage:', err);
   }
+
+  // Real-time background sync to Google Sheets if connected
+  if (config.connected && config.spreadsheetId) {
+    import('./googleService').then(({ pushDataToSpreadsheet }) => {
+      pushDataToSpreadsheet(config.spreadsheetId).catch(err => {
+        console.warn('Realtime background push to Google Sheets skipped or failed:', err);
+      });
+    }).catch(() => {});
+  }
 };
 
 // Spreadsheet Export/Import
 export const exportDatabaseAsSpreadsheetJSON = () => {
   const data = {
+    synced_at: new Date().toISOString(),
     profiles: getFromStorage<Profile>('guruku_profiles', DEFAULT_PROFILE),
     subjects: getFromStorage<Subject[]>('guruku_subjects', []),
     classes: getFromStorage<Class[]>('guruku_classes', []),
