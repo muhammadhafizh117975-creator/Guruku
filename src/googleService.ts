@@ -7,7 +7,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 import { Profile, Subject, Class, Student, Grade, Attendance, TeachingJournal } from './types';
-import { getFromStorage, saveToStorage } from './store';
+import { getFromStorage, saveToStorage, exportDatabaseAsSpreadsheetJSON } from './store';
 
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -359,6 +359,69 @@ export async function createGuruKuSpreadsheet(): Promise<{ id: string; url: stri
     id: data.spreadsheetId,
     url: data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${data.spreadsheetId}/edit`
   };
+}
+
+/**
+ * Find existing GuruKu Spreadsheet in Google Drive
+ */
+export async function findExistingSpreadsheet(): Promise<{ id: string; url: string } | null> {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  try {
+    const query = encodeURIComponent("name = 'GuruKu - Administrasi Sekolah Digital' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false");
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,webViewLink)&orderBy=createdTime desc`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.files && data.files.length > 0) {
+      return {
+        id: data.files[0].id,
+        url: data.files[0].webViewLink || `https://docs.google.com/spreadsheets/d/${data.files[0].id}/edit`
+      };
+    }
+  } catch (err) {
+    console.warn('Error searching for existing spreadsheet:', err);
+  }
+  return null;
+}
+
+/**
+ * Automatically set up Google Workspace database and auto-sync
+ */
+export async function autoSetupGoogleDatabase(): Promise<{ spreadsheetId: string; sheetUrl: string; isNew: boolean }> {
+  // 1. Find or Create Spreadsheet
+  let sheetInfo = await findExistingSpreadsheet();
+  let isNew = false;
+  
+  if (!sheetInfo) {
+    sheetInfo = await createGuruKuSpreadsheet();
+    isNew = true;
+  }
+
+  // 2. Push current database tables to Google Sheets
+  await pushDataToSpreadsheet(sheetInfo.id);
+
+  // 3. Save connection config in local storage
+  const updatedConfig = {
+    connected: true,
+    spreadsheetId: sheetInfo.id,
+    sheetUrl: sheetInfo.url,
+    lastSynced: new Date().toISOString().replace('T', ' ').substring(0, 16)
+  };
+  saveToStorage('guruku_spreadsheet_config', updatedConfig);
+
+  // 4. Create initial secure backup in Google Drive
+  try {
+    const backupJson = exportDatabaseAsSpreadsheetJSON();
+    const fileName = `guruku_auto_setup_backup_${new Date().toISOString().substring(0, 10)}.json`;
+    await uploadBackupToDrive(fileName, backupJson);
+  } catch (backupErr) {
+    console.warn('Auto backup to Drive during setup skipped:', backupErr);
+  }
+
+  return { spreadsheetId: sheetInfo.id, sheetUrl: sheetInfo.url, isNew };
 }
 
 /**

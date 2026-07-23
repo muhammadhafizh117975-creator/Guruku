@@ -57,6 +57,7 @@ import {
   listBackupsFromDrive,
   downloadBackupFromDrive,
   initAuth,
+  autoSetupGoogleDatabase,
   GoogleUser
 } from '../googleService';
 
@@ -252,18 +253,47 @@ export default function AppSettingsView() {
     handleSaveSettings(updated);
   };
 
-  // Google Sign-In
+  // Google Sign-In with Automatic Database & Drive Setup
   const handleGoogleSignIn = async () => {
     try {
       setIsConnectingGoogle(true);
+      setNotification({
+        type: 'success',
+        message: 'Menghubungkan ke Akun Google Anda...'
+      });
       const res = await googleSignIn();
       if (res) {
         setGoogleUser(res.user);
         setGToken(res.accessToken);
+
+        // Perform automatic database & Google Drive setup
         setNotification({
           type: 'success',
-          message: 'Berhasil menghubungkan Google Workspace!'
+          message: 'Menyiapkan database Google Spreadsheet & Google Drive Backup secara otomatis...'
         });
+
+        try {
+          const setupResult = await autoSetupGoogleDatabase();
+          const updatedConfig = {
+            connected: true,
+            spreadsheetId: setupResult.spreadsheetId,
+            sheetUrl: setupResult.sheetUrl,
+            lastSynced: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          };
+          saveToStorage('guruku_spreadsheet_config', updatedConfig);
+          setSheetConfig(updatedConfig);
+
+          setNotification({
+            type: 'success',
+            message: `Berhasil menghubungkan akun Google (${res.user.email})! Database Spreadsheet & Google Drive Backup otomatis aktif.`
+          });
+        } catch (setupErr: any) {
+          console.warn('Auto database setup error:', setupErr);
+          setNotification({
+            type: 'success',
+            message: 'Berhasil masuk dengan akun Google! Anda dapat menekan tombol "Buat Baru" atau "Push ke Sheets" untuk memicu sinkronisasi.'
+          });
+        }
         
         // Refresh list of backups
         setTimeout(() => {
@@ -1148,19 +1178,24 @@ export default function AppSettingsView() {
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center py-2 text-center space-y-2">
-                  <p className="text-xs text-gray-500 font-semibold">Integrasikan akun Google Anda untuk mengaktifkan sinkronisasi otomatis</p>
+                <div className="flex flex-col items-center py-2 text-center space-y-2.5">
+                  <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-[#696cff] dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/40">
+                    Auto-Setup Database & Drive Storage
+                  </span>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 font-medium max-w-sm">
+                    Cukup masukkan akun Google Anda untuk otomatis membuat database Google Spreadsheet dan cadangan aman Google Drive.
+                  </p>
                   <button
                     disabled={isConnectingGoogle}
                     onClick={handleGoogleSignIn}
-                    className="px-4 py-2 bg-white dark:bg-[#2b2c40] hover:bg-gray-50 border border-gray-200 dark:border-neutral-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 transition cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-[#696cff] hover:bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     {isConnectingGoogle ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-[#696cff]" />
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
                     ) : (
-                      <Cloud className="w-4 h-4 text-[#696cff]" />
+                      <Cloud className="w-4 h-4 text-white" />
                     )}
-                    <span>Hubungkan ke Google Workspace</span>
+                    <span>{isConnectingGoogle ? 'Menghubungkan Akun...' : 'Masuk dengan Akun Google (Auto-Sync DB)'}</span>
                   </button>
                   <button
                     onClick={() => setShowDomainAuthModal(true)}

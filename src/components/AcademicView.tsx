@@ -32,7 +32,10 @@ import {
   ChevronDown,
   Percent,
   Sliders,
-  PenTool
+  PenTool,
+  Eye,
+  X,
+  ExternalLink
 } from 'lucide-react';
 
 interface AcademicViewProps {
@@ -118,6 +121,10 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
   const [maAttachment, setMaAttachment] = useState('');
   const [editModulId, setEditModulId] = useState<string | null>(null);
 
+  // Modul Ajar Preview States
+  const [previewModul, setPreviewModul] = useState<ModulAjar | null>(null);
+  const [previewAttachmentUrl, setPreviewAttachmentUrl] = useState<string | null>(null);
+
   // Jurnal Form Fields
   const [jrHour, setJrHour] = useState('07:30 - 09:00');
   const [jrTopic, setJrTopic] = useState('');
@@ -177,13 +184,34 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
   const uploadFile = async (file: File) => {
     const token = await getAccessToken();
     if (!token) {
-      // Local fallback
-      if (currentMenu === 'modul_ajar') {
-        setMaAttachment(file.name);
+      // Local fallback with Data URL preview capability
+      if (file.size <= 10 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          if (currentMenu === 'modul_ajar') {
+            setMaAttachment(dataUrl || file.name);
+          } else {
+            setAttachedFile(dataUrl || file.name);
+          }
+          triggerAlert(`File "${file.name}" terpilih & siap dipreview secara lokal! Hubungkan ke Google Workspace di menu Spreadsheet untuk mengunggah ke Google Drive.`, 'success');
+        };
+        reader.onerror = () => {
+          if (currentMenu === 'modul_ajar') {
+            setMaAttachment(file.name);
+          } else {
+            setAttachedFile(file.name);
+          }
+        };
+        reader.readAsDataURL(file);
       } else {
-        setAttachedFile(file.name);
+        if (currentMenu === 'modul_ajar') {
+          setMaAttachment(file.name);
+        } else {
+          setAttachedFile(file.name);
+        }
+        triggerAlert(`File "${file.name}" terpilih secara lokal. Hubungkan ke Google Workspace di menu Spreadsheet untuk mengunggah ke Google Drive!`, 'success');
       }
-      triggerAlert(`File "${file.name}" terpilih secara lokal. Hubungkan ke Google Workspace di menu Spreadsheet untuk mengunggah otomatis ke Google Drive!`, 'success');
       return;
     }
 
@@ -1458,9 +1486,23 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
                       <div className="flex flex-col items-center">
                         <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-1" />
                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate max-w-full block" title={maAttachment}>
-                          {maAttachment.startsWith('http') ? 'Tautan Google Drive Aktif' : maAttachment}
+                          {maAttachment.startsWith('http') ? 'Tautan Google Drive Aktif' : maAttachment.startsWith('data:') ? 'Dokumen Terlampir (Siap Dipreview)' : maAttachment}
                         </span>
-                        <span className="text-[10px] text-gray-400 mt-1">Klik untuk mengganti</span>
+                        <div className="flex items-center gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setPreviewAttachmentUrl(maAttachment);
+                            }}
+                            className="px-3 py-1 bg-[#696cff] hover:bg-indigo-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Lihat / Preview RPP</span>
+                          </button>
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1">Klik area untuk mengganti berkas</span>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center">
@@ -1571,17 +1613,27 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
                           )}
                         </div>
 
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewModul(ma)}
+                            className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 text-[#696cff] dark:text-indigo-300 rounded-lg text-xs font-bold flex items-center gap-1 border border-indigo-100 dark:border-indigo-900/40 transition cursor-pointer"
+                            title="Pratinjau Modul Ajar RPP"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Lihat / Preview</span>
+                          </button>
+                          <span className="opacity-30">|</span>
                           <button
                             onClick={() => handleEditModul(ma)}
-                            className="text-[#696cff] font-bold hover:underline cursor-pointer"
+                            className="text-[#696cff] font-bold hover:underline cursor-pointer text-xs"
                           >
                             Ubah
                           </button>
-                          <span className="opacity-50">|</span>
+                          <span className="opacity-30">|</span>
                           <button
                             onClick={() => handleDeleteModul(ma.id)}
-                            className="text-rose-500 font-bold hover:underline cursor-pointer"
+                            className="text-rose-500 font-bold hover:underline cursor-pointer text-xs"
                           >
                             Hapus
                           </button>
@@ -1601,6 +1653,185 @@ export default function AcademicView({ currentMenu }: AcademicViewProps) {
 
           </div>
 
+        </div>
+      )}
+
+      {/* MODAL PREVIEW MODUL AJAR / RPP */}
+      {(previewModul || previewAttachmentUrl) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-[#2b2c40] rounded-2xl shadow-2xl border border-gray-100 dark:border-neutral-800 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden transition-all">
+            
+            {/* Header Modal */}
+            <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-neutral-800 flex items-center justify-between bg-gray-50/50 dark:bg-[#232333]/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-[#696cff]">
+                  <BookOpenCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">
+                    Pratinjau Modul Ajar (RPP)
+                  </h3>
+                  <p className="text-[11px] text-gray-400">
+                    {previewModul 
+                      ? `${subjects.find(s => s.id === previewModul.subject_id)?.name || 'Mapel'} - ${classes.find(c => c.id === previewModul.class_id)?.name || 'Kelas'}`
+                      : 'Lampiran Berkas RPP / Modul Ajar'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {previewModul && (
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 border border-gray-200 dark:border-neutral-700 hover:bg-gray-100 dark:hover:bg-[#232333] text-gray-700 dark:text-gray-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#696cff]" />
+                    <span>Cetak RPP</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setPreviewModul(null);
+                    setPreviewAttachmentUrl(null);
+                  }}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-xl transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body Modal */}
+            <div className="p-6 overflow-y-auto space-y-6 text-gray-800 dark:text-gray-200">
+              {previewModul && (
+                <div className="space-y-5">
+                  {/* Banner Info */}
+                  <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="px-2.5 py-0.5 rounded-md bg-white dark:bg-[#2b2c40] text-[#696cff] text-xs font-bold border border-indigo-100 dark:border-neutral-800">
+                        {subjects.find(s => s.id === previewModul.subject_id)?.name} - {classes.find(c => c.id === previewModul.class_id)?.name}
+                      </span>
+                      <span className="text-xs font-mono text-gray-500 font-semibold">
+                        Semester {previewModul.semester} ({previewModul.duration})
+                      </span>
+                    </div>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white pt-1">
+                      Topik: {previewModul.topic}
+                    </h2>
+                  </div>
+
+                  {/* Section Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-[#232333]/60 border border-gray-100 dark:border-neutral-800/80 space-y-1.5">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#696cff]">1. Tujuan Pembelajaran</h4>
+                      <p className="text-xs leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300">
+                        {previewModul.objectives || '-'}
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-[#232333]/60 border border-gray-100 dark:border-neutral-800/80 space-y-1.5">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#696cff]">2. Asesmen / Penilaian</h4>
+                      <p className="text-xs leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300">
+                        {previewModul.assessment || '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-gray-50 dark:bg-[#232333]/60 border border-gray-100 dark:border-neutral-800/80 space-y-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#696cff]">3. Langkah Kegiatan Pembelajaran</h4>
+                    <p className="text-xs leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300">
+                      {previewModul.activities || '-'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Attachment Preview Section */}
+              {((previewModul && previewModul.attachment_url) || previewAttachmentUrl) && (() => {
+                const url = previewModul?.attachment_url || previewAttachmentUrl || '';
+                const isHttp = url.startsWith('http');
+                const isDataUrl = url.startsWith('data:');
+                const isPdf = isDataUrl && url.includes('application/pdf');
+                const isImg = isDataUrl && url.includes('image/');
+                const embedDriveUrl = isHttp && url.includes('drive.google.com') ? url.replace('/view', '/preview') : url;
+
+                return (
+                  <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-neutral-800">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <Paperclip className="w-4 h-4" />
+                        <span>Lampiran Berkas RPP / Modul Lengkap</span>
+                      </h4>
+
+                      {isHttp && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1 border border-emerald-200 dark:border-emerald-900/50 transition"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Buka Tautan Google Drive</span>
+                        </a>
+                      )}
+                    </div>
+
+                    {isDataUrl || (isHttp && url.includes('drive.google.com')) ? (
+                      <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-neutral-700 bg-gray-100 dark:bg-[#232333]">
+                        {isImg ? (
+                          <img src={url} alt="Preview RPP" className="max-h-[500px] mx-auto object-contain p-2" />
+                        ) : (
+                          <iframe
+                            src={embedDriveUrl}
+                            className="w-full h-[520px] border-none"
+                            title="Preview Dokumen RPP"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                          <div>
+                            <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block truncate max-w-md">
+                              {url}
+                            </span>
+                            <span className="text-[10px] text-gray-400">Berkas terlampir aktif</span>
+                          </div>
+                        </div>
+                        {isHttp && (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 bg-[#696cff] text-white rounded-lg text-xs font-bold flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Lihat Berkas</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+            </div>
+
+            {/* Footer Modal */}
+            <div className="p-4 border-t border-gray-100 dark:border-neutral-800 bg-gray-50/50 dark:bg-[#232333]/50 flex justify-end">
+              <button
+                onClick={() => {
+                  setPreviewModul(null);
+                  setPreviewAttachmentUrl(null);
+                }}
+                className="px-5 py-2 bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600 text-gray-800 dark:text-gray-100 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Tutup Pratinjau
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 
