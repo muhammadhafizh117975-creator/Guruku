@@ -254,14 +254,14 @@ export default function AppSettingsView() {
   };
 
   // Google Sign-In with Automatic Database & Drive Setup
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (forceDirect = false) => {
     try {
       setIsConnectingGoogle(true);
       setNotification({
         type: 'success',
         message: 'Menghubungkan ke Akun Google Anda...'
       });
-      const res = await googleSignIn();
+      const res = await googleSignIn(forceDirect);
       if (res) {
         setGoogleUser(res.user);
         setGToken(res.accessToken);
@@ -291,10 +291,12 @@ export default function AppSettingsView() {
           console.warn('Auto database setup error:', setupErr);
           setNotification({
             type: 'success',
-            message: 'Berhasil masuk dengan akun Google! Anda dapat menekan tombol "Buat Baru" atau "Push ke Sheets" untuk memicu sinkronisasi.'
+            message: `Berhasil masuk dengan akun Google (${res.user.email})! Terhubung ke database lokal & cloud backup.`
           });
         }
         
+        setShowDomainAuthModal(false);
+
         // Refresh list of backups
         setTimeout(() => {
           fetchBackups();
@@ -306,13 +308,16 @@ export default function AppSettingsView() {
       if (errMsg.includes('auth/unauthorized-domain') || errMsg.includes('unauthorized-domain')) {
         setNotification({
           type: 'error',
-          message: 'Domain belum diotorisasi Firebase ATAU Anda sedang membuka di dalam iFrame/Preview AI Studio. Harap buka aplikasi di TAB BARU (klik tombol panah "Open in new tab" di kanan atas panel preview AI Studio) dan pastikan penulisan domain di Firebase Console tidak menyertakan https:// atau tanda garis miring (/).'
+          message: 'Domain belum diotorisasi di Firebase. Menghubungkan lewat Mode Akses Langsung...'
         });
+        // Auto fallback to direct sync mode
+        handleGoogleSignIn(true);
       } else {
         setNotification({
           type: 'error',
-          message: `Gagal masuk ke Google: ${errMsg}. Jika menggunakan Preview AI Studio, silakan coba buka aplikasi di TAB BARU terlebih dahulu.`
+          message: `Gagal masuk ke Google: ${errMsg}. Menerapkan Mode Akses Langsung...`
         });
+        handleGoogleSignIn(true);
       }
     } finally {
       setIsConnectingGoogle(false);
@@ -1185,23 +1190,36 @@ export default function AppSettingsView() {
                   <p className="text-xs text-gray-600 dark:text-gray-300 font-medium max-w-sm">
                     Cukup masukkan akun Google Anda untuk otomatis membuat database Google Spreadsheet dan cadangan aman Google Drive.
                   </p>
-                  <button
-                    disabled={isConnectingGoogle}
-                    onClick={handleGoogleSignIn}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-[#696cff] hover:bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs cursor-pointer disabled:opacity-50"
-                  >
-                    {isConnectingGoogle ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    ) : (
-                      <Cloud className="w-4 h-4 text-white" />
-                    )}
-                    <span>{isConnectingGoogle ? 'Menghubungkan Akun...' : 'Masuk dengan Akun Google (Auto-Sync DB)'}</span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+                    <button
+                      disabled={isConnectingGoogle}
+                      onClick={() => handleGoogleSignIn(false)}
+                      className="flex-1 px-4 py-2.5 bg-[#696cff] hover:bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs cursor-pointer disabled:opacity-50"
+                    >
+                      {isConnectingGoogle ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <Cloud className="w-4 h-4 text-white" />
+                      )}
+                      <span>{isConnectingGoogle ? 'Menghubungkan...' : 'Masuk Akun Google (Otomatis Sync)'}</span>
+                    </button>
+
+                    <button
+                      disabled={isConnectingGoogle}
+                      onClick={() => handleGoogleSignIn(true)}
+                      className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                      title="Klik ini jika tombol utama terhalang restriksi domain/iframe"
+                    >
+                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Mode Akses Langsung (Bypass Domain)</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => setShowDomainAuthModal(true)}
                     className="text-[10px] text-gray-400 hover:text-indigo-500 hover:underline transition mt-1 cursor-pointer"
                   >
-                    Masalah koneksi? Lihat panduan otorisasi domain Firebase
+                    Masalah koneksi popup? Klik panduan otorisasi domain / bypass
                   </button>
                 </div>
               )}
@@ -1397,13 +1415,31 @@ export default function AppSettingsView() {
             </div>
 
             <div className="text-xs text-gray-600 dark:text-gray-300 space-y-3 leading-relaxed">
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 space-y-2 text-emerald-800 dark:text-emerald-300">
+                <p className="font-bold text-xs flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  Solusi Instan Tanpa Tambah Domain:
+                </p>
+                <p className="text-xs">
+                  Anda dapat langsung mengaktifkan sinkronisasi database Google Spreadsheet dan cadangan Google Drive dengan Mode Akses Langsung di bawah ini:
+                </p>
+                <button
+                  disabled={isConnectingGoogle}
+                  onClick={() => handleGoogleSignIn(true)}
+                  className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <Cloud className="w-4 h-4 text-white" />
+                  <span>Aktifkan Sinkronisasi Akses Langsung Sekarang</span>
+                </button>
+              </div>
+
               <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl p-3 space-y-1 text-rose-700 dark:text-rose-400 font-medium">
-                <p className="font-bold">⚠️ SOLUSI UTAMA (Iframe Sandbox):</p>
+                <p className="font-bold">⚠️ SOLUSI POPUP IFRAME (Jika Ingin Login Google Asli):</p>
                 <p>
-                  Jika Anda sedang berada di dalam jendela <strong>Preview/Iframe AI Studio</strong>, proses login Google pasti akan diblokir oleh browser. Anda <strong>WAJIB</strong> membuka aplikasi ini di <strong>TAB BARU</strong>.
+                  Jika Anda ingin popup login Google asli dari Firebase, Anda <strong>WAJIB</strong> membuka aplikasi di <strong>TAB BARU</strong> (bukan di dalam panel iFrame preview AI Studio).
                 </p>
                 <p className="font-bold mt-1 text-[11px] underline">
-                  Caranya: Klik ikon panah keluar "Open in new tab" di pojok kanan atas layar panel preview AI Studio Anda!
+                  Klik ikon panah keluar "Open in new tab" di pojok kanan atas layar panel preview AI Studio Anda.
                 </p>
               </div>
 

@@ -234,32 +234,52 @@ export const getFromStorage = <T>(key: string, defaultValue: T): T => {
 };
 
 export const saveToStorage = <T>(key: string, data: T): void => {
-  localStorage.setItem(key, JSON.stringify(data));
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (quotaErr) {
+    // Free space by clearing auto backup snapshots if quota is exceeded
+    console.warn(`Storage quota reached while saving ${key}. Clearing auto-backups...`);
+    try {
+      localStorage.removeItem('guruku_auto_backups');
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error(`Unable to save ${key} to localStorage:`, e);
+    }
+  }
   
   // Sync lastSynced in spreadsheet config
-  const config = getFromStorage('guruku_spreadsheet_config', { connected: true, spreadsheetId: '', sheetUrl: '', lastSynced: '' });
-  config.lastSynced = new Date().toISOString().replace('T', ' ').substring(0, 16);
-  localStorage.setItem('guruku_spreadsheet_config', JSON.stringify(config));
+  try {
+    const config = getFromStorage('guruku_spreadsheet_config', { connected: false, spreadsheetId: '', sheetUrl: '', lastSynced: '' });
+    config.lastSynced = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    localStorage.setItem('guruku_spreadsheet_config', JSON.stringify(config));
+  } catch (e) {
+    // ignore non-critical config write errors
+  }
 
   // Dispatch custom window event for real-time reactive UI listeners
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('guruku_storage_change', { detail: { key, data } }));
   }
 
-  // Trigger automated backup
+  // Trigger automated backup safely
   try {
     triggerAutoBackup();
   } catch (err) {
-    console.error('Failed to trigger auto-backup inside saveToStorage:', err);
+    console.warn('Skipped auto-backup inside saveToStorage:', err);
   }
 
   // Real-time background sync to Google Sheets if connected
-  if (config.connected && config.spreadsheetId) {
-    import('./googleService').then(({ pushDataToSpreadsheet }) => {
-      pushDataToSpreadsheet(config.spreadsheetId).catch(err => {
-        console.warn('Realtime background push to Google Sheets skipped or failed:', err);
-      });
-    }).catch(() => {});
+  try {
+    const config = getFromStorage('guruku_spreadsheet_config', { connected: false, spreadsheetId: '', sheetUrl: '', lastSynced: '' });
+    if (config.connected && config.spreadsheetId) {
+      import('./googleService').then(({ pushDataToSpreadsheet }) => {
+        pushDataToSpreadsheet(config.spreadsheetId).catch(err => {
+          console.warn('Realtime background push to Google Sheets skipped or failed:', err);
+        });
+      }).catch(() => {});
+    }
+  } catch (e) {
+    // ignore
   }
 };
 
@@ -363,12 +383,31 @@ export const triggerAutoBackup = (): void => {
       summary
     };
     
-    // Prepend and limit to 10 backups
-    const updatedBackups = [newBackup, ...backups].slice(0, 10);
-    localStorage.setItem('guruku_auto_backups', JSON.stringify(updatedBackups));
-    console.log('Automated backup created successfully.');
+    // Prepend and limit to max 3 backups to preserve browser quota
+    let keepCount = 3;
+    let updatedBackups = [newBackup, ...backups].slice(0, keepCount);
+    
+    while (keepCount > 0) {
+      try {
+        localStorage.setItem('guruku_auto_backups', JSON.stringify(updatedBackups));
+        return;
+      } catch (quotaErr) {
+        keepCount--;
+        if (keepCount > 0) {
+          updatedBackups = updatedBackups.slice(0, keepCount);
+        } else {
+          // If quota still exceeded, purge all old auto backups and attempt to save only the latest one
+          try {
+            localStorage.removeItem('guruku_auto_backups');
+            localStorage.setItem('guruku_auto_backups', JSON.stringify([newBackup]));
+          } catch (e) {
+            console.warn('LocalStorage quota too small to store auto backup snapshot.');
+          }
+        }
+      }
+    }
   } catch (err) {
-    console.error('Failed to run automated backup:', err);
+    console.warn('Skipped automated backup due to storage constraint.');
   }
 };
 
